@@ -11,6 +11,7 @@ export const CACHE_KEYS = {
   config: "public:config",
   alumni: "public:alumni",
   jobs: "public:jobs",
+  videos: "public:videos",
   live: "public:live",
 } as const;
 

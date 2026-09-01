@@ -18,6 +18,7 @@ import * as scholarship from "../scholarships/scholarship.service.ts";
 import * as quizzes from "../quizzes/quiz.service.ts";
 import * as staff from "../staff/staff.service.ts";
 import * as alumni from "../alumni/alumni.service.ts";
+import * as videos from "../videos/video.service.ts";
 import * as admissionSvc from "../admissions/admission.service.ts";
 import * as enrollmentSvc from "../enrollments/enrollment.service.ts";
 import * as enquiries from "../enquiries/enquiry.service.ts";
@@ -44,6 +45,7 @@ import {
   Course,
   CourseCategory,
   Job,
+  Video,
   LiveClass,
   Notice,
   Notification,
@@ -229,6 +231,7 @@ router.get("/gallery/albums/:id", requirePermission("gallery:write"), asyncHandl
 router.patch("/gallery/albums/:id", requirePermission("gallery:write"), asyncHandler(async (req, res) => ok(res, await gallery.updateAlbum(req.params.id, req.body))));
 router.delete("/gallery/albums/:id", requirePermission("gallery:write"), asyncHandler(async (req, res) => ok(res, await gallery.deleteAlbum(req.params.id))));
 router.post("/alumni", requirePermission("cms:write"), asyncHandler(async (req, res) => created(res, await alumni.createAlumni(req.body))));
+router.post("/videos", requirePermission("cms:write"), asyncHandler(async (req, res) => created(res, await videos.createVideo(req.body))));
 router.post("/jobs", requirePermission("job:write"), asyncHandler(async (req, res) => {
   const row = await Job.create(req.body);
   void notifyJob(row.toObject());
@@ -519,6 +522,10 @@ router.get("/staff", requireAnyPermission("staff:write", "course:read", "course:
 }));
 router.get("/alumni", requirePermission("cms:write"), asyncHandler(async (req, res) => {
   const data = await paged(Alumni, req);
+  return ok(res, data.items, "OK", data.meta);
+}));
+router.get("/videos", requirePermission("cms:write"), asyncHandler(async (req, res) => {
+  const data = await paged(Video, req);
   return ok(res, data.items, "OK", data.meta);
 }));
 router.get("/jobs", requirePermission("job:write"), asyncHandler(async (req, res) => {
@@ -942,6 +949,8 @@ router.patch("/staff/:id", requirePermission("staff:write"), asyncHandler(async 
 router.delete("/staff/:id", requirePermission("staff:write"), asyncHandler(async (req, res) => ok(res, await staff.deleteStaff(req.params.id))));
 router.patch("/alumni/:id", requirePermission("cms:write"), asyncHandler(async (req, res) => ok(res, await alumni.updateAlumni(req.params.id, req.body))));
 router.delete("/alumni/:id", requirePermission("cms:write"), asyncHandler(async (req, res) => ok(res, await alumni.deleteAlumni(req.params.id))));
+router.patch("/videos/:id", requirePermission("cms:write"), asyncHandler(async (req, res) => ok(res, await videos.updateVideo(req.params.id, req.body))));
+router.delete("/videos/:id", requirePermission("cms:write"), asyncHandler(async (req, res) => ok(res, await videos.deleteVideo(req.params.id))));
 router.patch("/cms/:id", requirePermission("cms:write"), asyncHandler(async (req, res) => ok(res, await cms.updateCms(req.params.id, req.body))));
 router.delete("/cms/:id", requirePermission("cms:write"), asyncHandler(async (req, res) => ok(res, await cms.deleteCms(req.params.id))));
 

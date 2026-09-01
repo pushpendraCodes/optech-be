@@ -839,6 +839,30 @@ const JobSchema = new Schema<JobDoc>(
   { timestamps: true },
 );
 
+export interface VideoDoc extends Document {
+  title: string;
+  description?: string;
+  youtubeUrl: string;
+  youtubeId: string;
+  category?: string;
+  featured: boolean;
+  published: boolean;
+  sortOrder: number;
+}
+const VideoSchema = new Schema<VideoDoc>(
+  {
+    title: String,
+    description: String,
+    youtubeUrl: String,
+    youtubeId: String,
+    category: String,
+    featured: { type: Boolean, default: false },
+    published: { type: Boolean, default: true },
+    sortOrder: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+
 export interface ReferralDoc extends Document {
   referrer: Types.ObjectId;
   code: string;
@@ -1089,6 +1113,7 @@ export const GalleryAlbum = mongoose.model("GalleryAlbum", GalleryAlbumSchema);
 export const GalleryMedia = mongoose.model("GalleryMedia", GalleryMediaSchema);
 export const Alumni = mongoose.model("Alumni", AlumniSchema);
 export const Job = mongoose.model("Job", JobSchema);
+export const Video = mongoose.model("Video", VideoSchema);
 export const Referral = mongoose.model("Referral", ReferralSchema);
 export const ScholarshipExam = mongoose.model("ScholarshipExam", ScholarshipExamSchema);
 export const ScholarshipResult = mongoose.model("ScholarshipResult", ScholarshipResultSchema);

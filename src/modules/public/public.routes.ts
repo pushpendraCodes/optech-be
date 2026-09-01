@@ -8,6 +8,7 @@ import * as cms from "../cms/cms.service.ts";
 import * as payments from "../payments/payment.service.ts";
 import * as scholarship from "../scholarships/scholarship.service.ts";
 import * as enquiries from "../enquiries/enquiry.service.ts";
+import * as videoSvc from "../videos/video.service.ts";
 import { objectId } from "../../utils/pagination.ts";
 import { env } from "../../config/env.ts";
 import { indianMobileSchema, optionalIndianMobileSchema } from "../../utils/phone.ts";
@@ -38,6 +39,7 @@ router.get("/notices", asyncHandler(async (_req, res) => ok(res, await cms.publi
 router.get("/gallery", asyncHandler(async (_req, res) => ok(res, await cms.publicGallery())));
 router.get("/alumni", asyncHandler(async (_req, res) => ok(res, await cms.publicAlumni())));
 router.get("/jobs", asyncHandler(async (_req, res) => ok(res, await cms.publicJobs())));
+router.get("/videos", asyncHandler(async (_req, res) => ok(res, await videoSvc.publicVideos())));
 router.get("/marquee", asyncHandler(async (_req, res) => ok(res, await cms.publicCms("marquee"))));
 router.get("/ads", asyncHandler(async (_req, res) => ok(res, await cms.publicCms("ad"))));
 router.get("/popups", asyncHandler(async (_req, res) => ok(res, await cms.publicCms("popup"))));
