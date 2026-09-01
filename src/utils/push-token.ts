@@ -1,4 +1,4 @@
-import { Student, User } from "../models/index.js";
+import { Student, User } from "../models/index.ts";
 
 const emptyPushToken = { $or: [{ pushToken: { $exists: false } }, { pushToken: null }, { pushToken: "" }] };
 

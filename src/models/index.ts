@@ -1,5 +1,5 @@
 import mongoose, { Schema, type Document, type Types } from "mongoose";
-import type { CloudinaryAsset, Localized } from "../types/common.js";
+import type { CloudinaryAsset, Localized } from "../types/common.ts";
 
 const AssetSchema = new Schema<CloudinaryAsset>(
   {

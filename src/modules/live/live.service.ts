@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { LiveClass, Notification } from "../../models/index.js";
-import { ValidationError, NotFoundError, ForbiddenError } from "../../utils/errors.js";
-import { extractYoutubeId } from "../../services/youtube.service.js";
-import { enqueueBroadcast, notifyLiveNow } from "../../services/notification.service.js";
-import { cache } from "../../services/cache.service.js";
-import { CACHE_KEYS } from "../../constants/cache.js";
+import { LiveClass, Notification } from "../../models/index.ts";
+import { ValidationError, NotFoundError, ForbiddenError } from "../../utils/errors.ts";
+import { extractYoutubeId } from "../../services/youtube.service.ts";
+import { enqueueBroadcast, notifyLiveNow } from "../../services/notification.service.ts";
+import { cache } from "../../services/cache.service.ts";
+import { CACHE_KEYS } from "../../constants/cache.ts";
 
 const createBodySchema = z.object({
   title: z.string().min(2),

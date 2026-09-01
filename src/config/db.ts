@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import { env } from "./env.js";
-import { logger } from "./logger.js";
+import { env } from "./env.ts";
+import { logger } from "./logger.ts";
 
 async function dropLegacyUserUniqueIndexes() {
   try {

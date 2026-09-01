@@ -1,8 +1,8 @@
 import argon2 from "argon2";
-import { connectDb } from "../config/db.js";
-import { logger } from "../config/logger.js";
-import { SUPER_ADMIN } from "../constants/admin.js";
-import { PERMISSIONS, ROLE_PERMISSIONS, ROLE_KEYS } from "../constants/rbac.js";
+import { connectDb } from "../config/db.ts";
+import { logger } from "../config/logger.ts";
+import { SUPER_ADMIN } from "../constants/admin.ts";
+import { PERMISSIONS, ROLE_PERMISSIONS, ROLE_KEYS } from "../constants/rbac.ts";
 import {
   Admission,
   Alumni,
@@ -33,7 +33,7 @@ import {
   StudyMaterial,
   TypingParagraph,
   User,
-} from "../models/index.js";
+} from "../models/index.ts";
 
 const CATEGORIES = [
   { slug: "basic-computer", name: "Basic Computer" },

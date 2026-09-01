@@ -1,28 +1,28 @@
 import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
-import { authenticate, requirePermission, requireAnyPermission, requireStaff } from "../../middleware/auth.js";
-import { validate } from "../../middleware/validate.js";
-import { asyncHandler } from "../../utils/async-handler.js";
-import { created, ok } from "../../utils/api-response.js";
-import { NotFoundError } from "../../utils/errors.js";
-import { objectId, paginationQuery } from "../../utils/pagination.js";
-import { saveUserPushTokenIfEmpty } from "../../utils/push-token.js";
-import * as courses from "../courses/course.service.js";
-import * as attendance from "../attendance/attendance.service.js";
-import * as students from "../students/student.service.js";
-import * as cms from "../cms/cms.service.js";
-import * as gallery from "../gallery/gallery.service.js";
-import * as live from "../live/live.service.js";
-import * as scholarship from "../scholarships/scholarship.service.js";
-import * as quizzes from "../quizzes/quiz.service.js";
-import * as staff from "../staff/staff.service.js";
-import * as alumni from "../alumni/alumni.service.js";
-import * as admissionSvc from "../admissions/admission.service.js";
-import * as enrollmentSvc from "../enrollments/enrollment.service.js";
-import * as enquiries from "../enquiries/enquiry.service.js";
-import * as adminUsers from "./admin-user.service.js";
-import { uploadBuffer } from "../../services/cloudinary.service.js";
+import { authenticate, requirePermission, requireAnyPermission, requireStaff } from "../../middleware/auth.ts";
+import { validate } from "../../middleware/validate.ts";
+import { asyncHandler } from "../../utils/async-handler.ts";
+import { created, ok } from "../../utils/api-response.ts";
+import { NotFoundError } from "../../utils/errors.ts";
+import { objectId, paginationQuery } from "../../utils/pagination.ts";
+import { saveUserPushTokenIfEmpty } from "../../utils/push-token.ts";
+import * as courses from "../courses/course.service.ts";
+import * as attendance from "../attendance/attendance.service.ts";
+import * as students from "../students/student.service.ts";
+import * as cms from "../cms/cms.service.ts";
+import * as gallery from "../gallery/gallery.service.ts";
+import * as live from "../live/live.service.ts";
+import * as scholarship from "../scholarships/scholarship.service.ts";
+import * as quizzes from "../quizzes/quiz.service.ts";
+import * as staff from "../staff/staff.service.ts";
+import * as alumni from "../alumni/alumni.service.ts";
+import * as admissionSvc from "../admissions/admission.service.ts";
+import * as enrollmentSvc from "../enrollments/enrollment.service.ts";
+import * as enquiries from "../enquiries/enquiry.service.ts";
+import * as adminUsers from "./admin-user.service.ts";
+import { uploadBuffer } from "../../services/cloudinary.service.ts";
 import {
   enqueueBroadcast,
   listStaffAlerts,
@@ -32,8 +32,8 @@ import {
   notifyPaymentReceived,
   notifyStudyMaterial,
   staffAlertUnreadCount,
-} from "../../services/notification.service.js";
-import { writeAudit } from "../../services/audit.service.js";
+} from "../../services/notification.service.ts";
+import { writeAudit } from "../../services/audit.service.ts";
 import {
   Admission,
   Alumni,
@@ -64,12 +64,12 @@ import {
   QuizAttempt,
   Referral,
   TypingAttempt,
-} from "../../models/index.js";
-import { buildIdCardPdf } from "../../services/pdf.service.js";
-import * as certificateSvc from "../../services/certificate.service.js";
-import * as installmentSvc from "../../services/installment.service.js";
-import * as siteSettings from "../../services/website-settings.service.js";
-import type { Permission } from "../../constants/rbac.js";
+} from "../../models/index.ts";
+import { buildIdCardPdf } from "../../services/pdf.service.ts";
+import * as certificateSvc from "../../services/certificate.service.ts";
+import * as installmentSvc from "../../services/installment.service.ts";
+import * as siteSettings from "../../services/website-settings.service.ts";
+import type { Permission } from "../../constants/rbac.ts";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
 const router = Router();
@@ -213,8 +213,8 @@ router.post("/notes", requirePermission("notes:write"), asyncHandler(async (req,
 }));
 router.post("/notices", requirePermission("notice:write"), asyncHandler(async (req, res) => {
   const row = await Notice.create(req.body);
-  const { cache } = await import("../../services/cache.service.js");
-  const { CACHE_KEYS } = await import("../../constants/cache.js");
+  const { cache } = await import("../../services/cache.service.ts");
+  const { CACHE_KEYS } = await import("../../constants/cache.ts");
   await cache.del(CACHE_KEYS.notices);
   void notifyNotice(row.toObject());
   return created(res, row);

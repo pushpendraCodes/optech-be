@@ -8,26 +8,26 @@ import {
   ScholarshipResult,
   Setting,
   Student,
-} from "../../models/index.js";
-import { applyCoupon, installmentPlan, preventSelfReferral } from "../../services/pricing.service.js";
-import { computeStudentFees } from "../../services/installment.service.js";
+} from "../../models/index.ts";
+import { applyCoupon, installmentPlan, preventSelfReferral } from "../../services/pricing.service.ts";
+import { computeStudentFees } from "../../services/installment.service.ts";
 import {
   claimWebhookEvent,
   createOrder,
   verifyCheckoutSignature,
   verifyWebhookSignature,
-} from "../../services/razorpay.service.js";
-import { BadRequestError, NotFoundError } from "../../utils/errors.js";
-import { buildInvoicePdf } from "../../services/pdf.service.js";
-import { getWebsiteSettings } from "../../services/website-settings.service.js";
-import { notifyStaffAlert } from "../../services/notification.service.js";
-import { sendEmail } from "../../services/messaging.service.js";
-import { logger } from "../../config/logger.js";
+} from "../../services/razorpay.service.ts";
+import { BadRequestError, NotFoundError } from "../../utils/errors.ts";
+import { buildInvoicePdf } from "../../services/pdf.service.ts";
+import { getWebsiteSettings } from "../../services/website-settings.service.ts";
+import { notifyStaffAlert } from "../../services/notification.service.ts";
+import { sendEmail } from "../../services/messaging.service.ts";
+import { logger } from "../../config/logger.ts";
 import {
   extractPaymentDiscount,
   normalizePhone,
   paymentPhone,
-} from "../../services/payment-discount.service.js";
+} from "../../services/payment-discount.service.ts";
 
 async function feeSettings() {
   const row = await Setting.findOne({ key: "installments" }).lean();

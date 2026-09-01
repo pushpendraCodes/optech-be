@@ -1,8 +1,8 @@
 import nodemailer from "nodemailer";
 import type { FirebaseError } from "firebase-admin/app";
-import { env } from "../config/env.js";
-import { logger } from "../config/logger.js";
-import { messaging } from "../config/firebase.js";
+import { env } from "../config/env.ts";
+import { logger } from "../config/logger.ts";
+import { messaging } from "../config/firebase.ts";
 
 let transporter: nodemailer.Transporter | null = null;
 

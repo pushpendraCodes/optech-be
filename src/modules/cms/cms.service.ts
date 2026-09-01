@@ -1,7 +1,7 @@
-import { CmsItem, Alumni, Job, Notice } from "../../models/index.js";
-import * as gallery from "../gallery/gallery.service.js";
-import { cache } from "../../services/cache.service.js";
-import { CACHE_KEYS } from "../../constants/cache.js";
+import { CmsItem, Alumni, Job, Notice } from "../../models/index.ts";
+import * as gallery from "../gallery/gallery.service.ts";
+import { cache } from "../../services/cache.service.ts";
+import { CACHE_KEYS } from "../../constants/cache.ts";
 
 const TTL = 60;
 

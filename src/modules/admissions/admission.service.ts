@@ -8,12 +8,12 @@ import {
   Referral,
   Student,
   User,
-} from "../../models/index.js";
-import { createEnrollmentInstallments } from "../../services/installment.service.js";
-import { enqueueBroadcast } from "../../services/notification.service.js";
-import { preventSelfReferral } from "../../services/pricing.service.js";
-import { BadRequestError, NotFoundError } from "../../utils/errors.js";
-import { hashPassword, makeReferralCode, makeStudentCode } from "../auth/auth.service.js";
+} from "../../models/index.ts";
+import { createEnrollmentInstallments } from "../../services/installment.service.ts";
+import { enqueueBroadcast } from "../../services/notification.service.ts";
+import { preventSelfReferral } from "../../services/pricing.service.ts";
+import { BadRequestError, NotFoundError } from "../../utils/errors.ts";
+import { hashPassword, makeReferralCode, makeStudentCode } from "../auth/auth.service.ts";
 
 async function uniqueReferralCode(name: string) {
   for (let i = 0; i < 8; i++) {

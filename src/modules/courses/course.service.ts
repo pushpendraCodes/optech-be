@@ -1,8 +1,8 @@
-import { Course, CourseCategory, Batch, Staff } from "../../models/index.js";
-import { cache } from "../../services/cache.service.js";
-import { CACHE_KEYS } from "../../constants/cache.js";
-import { NotFoundError } from "../../utils/errors.js";
-import { paginationMeta, skipLimit, type PaginationQuery } from "../../utils/pagination.js";
+import { Course, CourseCategory, Batch, Staff } from "../../models/index.ts";
+import { cache } from "../../services/cache.service.ts";
+import { CACHE_KEYS } from "../../constants/cache.ts";
+import { NotFoundError } from "../../utils/errors.ts";
+import { paginationMeta, skipLimit, type PaginationQuery } from "../../utils/pagination.ts";
 
 const PUBLIC_TTL = 60;
 

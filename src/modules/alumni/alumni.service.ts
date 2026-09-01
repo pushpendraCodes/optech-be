@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { Alumni } from "../../models/index.js";
-import { cache } from "../../services/cache.service.js";
-import { CACHE_KEYS } from "../../constants/cache.js";
-import { NotFoundError, ValidationError } from "../../utils/errors.js";
-import type { CloudinaryAsset } from "../../types/common.js";
+import { Alumni } from "../../models/index.ts";
+import { cache } from "../../services/cache.service.ts";
+import { CACHE_KEYS } from "../../constants/cache.ts";
+import { NotFoundError, ValidationError } from "../../utils/errors.ts";
+import type { CloudinaryAsset } from "../../types/common.ts";
 
 const assetSchema = z.object({
   publicId: z.string().optional(),

@@ -1,6 +1,6 @@
-import { Attendance } from "../../models/index.js";
-import { writeAudit } from "../../services/audit.service.js";
-import { ConflictError } from "../../utils/errors.js";
+import { Attendance } from "../../models/index.ts";
+import { writeAudit } from "../../services/audit.service.ts";
+import { ConflictError } from "../../utils/errors.ts";
 import type { Types } from "mongoose";
 
 export async function markBulk(

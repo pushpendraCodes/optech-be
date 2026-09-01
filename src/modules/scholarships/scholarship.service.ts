@@ -1,11 +1,11 @@
 import { z } from "zod";
 import { nanoid } from "nanoid";
-import { Coupon, ScholarshipExam, ScholarshipResult, Student, type QuizQuestion } from "../../models/index.js";
-import { gradeQuiz } from "../../services/grading.service.js";
-import { pickScholarshipSlab } from "../../services/pricing.service.js";
-import { NotFoundError, ValidationError } from "../../utils/errors.js";
-import { objectId, paginationQuery } from "../../utils/pagination.js";
-import { questionInputSchema, validateImportRows, type ImportRow } from "../quizzes/quiz.service.js";
+import { Coupon, ScholarshipExam, ScholarshipResult, Student, type QuizQuestion } from "../../models/index.ts";
+import { gradeQuiz } from "../../services/grading.service.ts";
+import { pickScholarshipSlab } from "../../services/pricing.service.ts";
+import { NotFoundError, ValidationError } from "../../utils/errors.ts";
+import { objectId, paginationQuery } from "../../utils/pagination.ts";
+import { questionInputSchema, validateImportRows, type ImportRow } from "../quizzes/quiz.service.ts";
 
 const slabSchema = z.object({
   minPercent: z.number().min(0).max(100),

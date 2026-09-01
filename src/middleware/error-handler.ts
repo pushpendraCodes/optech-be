@@ -1,8 +1,8 @@
 import type { ErrorRequestHandler } from "express";
 import mongoose from "mongoose";
-import { isProd } from "../config/env.js";
-import { logger } from "../config/logger.js";
-import { AppError } from "../utils/errors.js";
+import { isProd } from "../config/env.ts";
+import { logger } from "../config/logger.ts";
+import { AppError } from "../utils/errors.ts";
 
 export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
   logger.error({ err, requestId: req.requestId, path: req.path }, err.message);

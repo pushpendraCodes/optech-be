@@ -1,10 +1,10 @@
-import { createApp } from "./app.js";
-import { connectDb } from "./config/db.js";
-import { connectRedis } from "./config/redis.js";
-import { env } from "./config/env.js";
-import { firebaseApp } from "./config/firebase.js";
-import { logger } from "./config/logger.js";
-import { startWorkers } from "./jobs/worker.js";
+import { createApp } from "./app.ts";
+import { connectDb } from "./config/db.ts";
+import { connectRedis } from "./config/redis.ts";
+import { env } from "./config/env.ts";
+import { firebaseApp } from "./config/firebase.ts";
+import { logger } from "./config/logger.ts";
+import { startWorkers } from "./jobs/worker.ts";
 
 function muteQueueNoise() {
   const original = console.error;

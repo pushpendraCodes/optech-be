@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { Types } from "mongoose";
-import { NotFoundError, ValidationError } from "../../utils/errors.js";
-import { objectId, paginationQuery } from "../../utils/pagination.js";
-import { Course, QuestionBank, Quiz, type QuizQuestion } from "../../models/index.js";
-import { notifyStudents } from "../../services/notification.service.js";
+import { NotFoundError, ValidationError } from "../../utils/errors.ts";
+import { objectId, paginationQuery } from "../../utils/pagination.ts";
+import { Course, QuestionBank, Quiz, type QuizQuestion } from "../../models/index.ts";
+import { notifyStudents } from "../../services/notification.service.ts";
 
 export const questionBankQuery = paginationQuery.extend({
   course: objectId.optional(),

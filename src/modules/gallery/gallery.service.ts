@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { NotFoundError, ValidationError } from "../../utils/errors.js";
-import { paginationQuery } from "../../utils/pagination.js";
-import { GalleryAlbum, GalleryMedia } from "../../models/index.js";
-import type { CloudinaryAsset } from "../../types/common.js";
-import { cache } from "../../services/cache.service.js";
-import { CACHE_KEYS } from "../../constants/cache.js";
+import { NotFoundError, ValidationError } from "../../utils/errors.ts";
+import { paginationQuery } from "../../utils/pagination.ts";
+import { GalleryAlbum, GalleryMedia } from "../../models/index.ts";
+import type { CloudinaryAsset } from "../../types/common.ts";
+import { cache } from "../../services/cache.service.ts";
+import { CACHE_KEYS } from "../../constants/cache.ts";
 
 export function parseYoutubeUrl(url: string): string | null {
   try {

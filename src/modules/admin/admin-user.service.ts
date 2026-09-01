@@ -1,7 +1,7 @@
-import { Role, User } from "../../models/index.js";
-import { ROLE_KEYS, type RoleKey } from "../../constants/rbac.js";
-import { BadRequestError, NotFoundError } from "../../utils/errors.js";
-import { hashPassword } from "../auth/auth.service.js";
+import { Role, User } from "../../models/index.ts";
+import { ROLE_KEYS, type RoleKey } from "../../constants/rbac.ts";
+import { BadRequestError, NotFoundError } from "../../utils/errors.ts";
+import { hashPassword } from "../auth/auth.service.ts";
 
 const ASSIGNABLE_ROLES: RoleKey[] = ["ADMIN", "STAFF", "TEACHER"];
 

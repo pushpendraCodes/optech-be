@@ -1,12 +1,12 @@
-import { Notification, NotificationReceipt, Student, User, AdminAlert, AdminAlertReceipt } from "../models/index.js";
-import type { NotificationDoc } from "../models/index.js";
-import { sendPush, isStalePushTokenError } from "./messaging.service.js";
-import { clearStudentPushToken, clearUserPushToken } from "../utils/push-token.js";
-import { logger } from "../config/logger.js";
-import { env } from "../config/env.js";
+import { Notification, NotificationReceipt, Student, User, AdminAlert, AdminAlertReceipt } from "../models/index.ts";
+import type { NotificationDoc } from "../models/index.ts";
+import { sendPush, isStalePushTokenError } from "./messaging.service.ts";
+import { clearStudentPushToken, clearUserPushToken } from "../utils/push-token.ts";
+import { logger } from "../config/logger.ts";
+import { env } from "../config/env.ts";
 import { Queue } from "bullmq";
-import { redis } from "../config/redis.js";
-import { QUEUE_NAMES } from "../constants/cache.js";
+import { redis } from "../config/redis.ts";
+import { QUEUE_NAMES } from "../constants/cache.ts";
 
 export const notificationQueue = new Queue(QUEUE_NAMES.notifications, {
   connection: redis,
@@ -106,13 +106,13 @@ async function resolveAudience(note: InstanceType<typeof Notification>) {
     return Student.find({ _id: note.student, blocked: false }).select("_id pushToken").lean();
   }
   if (note.audience === "COURSE" && note.course) {
-    const { Enrollment } = await import("../models/index.js");
+    const { Enrollment } = await import("../models/index.ts");
     const ens = await Enrollment.find({ course: note.course, status: "active" }).select("student").lean();
     const ids = ens.map((e) => e.student);
     return Student.find({ _id: { $in: ids }, blocked: false }).select("_id pushToken").lean();
   }
   if (note.audience === "BATCH" && note.batch) {
-    const { Enrollment } = await import("../models/index.js");
+    const { Enrollment } = await import("../models/index.ts");
     const ens = await Enrollment.find({ batch: note.batch, status: "active" }).select("student").lean();
     const ids = ens.map((e) => e.student);
     return Student.find({ _id: { $in: ids }, blocked: false }).select("_id pushToken").lean();

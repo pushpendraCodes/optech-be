@@ -1,6 +1,6 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
 import crypto from "node:crypto";
-import { env } from "../config/env.js";
+import { env } from "../config/env.ts";
 
 export type AccessPayload = {
   sub: string;

@@ -14,16 +14,16 @@ import {
   TypingAttempt,
   TypingParagraph,
   User,
-} from "../../models/index.js";
-import { ForbiddenError, NotFoundError } from "../../utils/errors.js";
-import { hashPassword } from "../auth/auth.service.js";
-import { gradeQuiz, gradeTyping } from "../../services/grading.service.js";
-import { buildIdCardPdf } from "../../services/pdf.service.js";
-import { computeStudentFees, studentIdsWithOutstandingFees } from "../../services/installment.service.js";
-import { certificatesForEnrollments } from "../../services/certificate.service.js";
-import { paginationMeta } from "../../utils/pagination.js";
-import { saveStudentPushTokenIfEmpty } from "../../utils/push-token.js";
-import type { PaginationQuery } from "../../utils/pagination.js";
+} from "../../models/index.ts";
+import { ForbiddenError, NotFoundError } from "../../utils/errors.ts";
+import { hashPassword } from "../auth/auth.service.ts";
+import { gradeQuiz, gradeTyping } from "../../services/grading.service.ts";
+import { buildIdCardPdf } from "../../services/pdf.service.ts";
+import { computeStudentFees, studentIdsWithOutstandingFees } from "../../services/installment.service.ts";
+import { certificatesForEnrollments } from "../../services/certificate.service.ts";
+import { paginationMeta } from "../../utils/pagination.ts";
+import { saveStudentPushTokenIfEmpty } from "../../utils/push-token.ts";
+import type { PaginationQuery } from "../../utils/pagination.ts";
 
 export async function dashboard(studentId: string) {
   const student = await Student.findById(studentId).populate("user").lean();

@@ -1,11 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { env } from "../../config/env.js";
-import { authenticate } from "../../middleware/auth.js";
-import { validate } from "../../middleware/validate.js";
-import { asyncHandler } from "../../utils/async-handler.js";
-import { ok } from "../../utils/api-response.js";
-import * as auth from "./auth.service.js";
+import { env } from "../../config/env.ts";
+import { authenticate } from "../../middleware/auth.ts";
+import { validate } from "../../middleware/validate.ts";
+import { asyncHandler } from "../../utils/async-handler.ts";
+import { ok } from "../../utils/api-response.ts";
+import * as auth from "./auth.service.ts";
 
 const router = Router();
 

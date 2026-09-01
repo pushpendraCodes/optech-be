@@ -7,7 +7,7 @@ export const DEFAULT_WEBSITE_SETTINGS = {
 };
 
 export async function getWebsiteSettings() {
-  const { Setting } = await import("../models/index.js");
+  const { Setting } = await import("../models/index.ts");
   const row = await Setting.findOne({ key: "website" }).lean();
   const value = (row?.value as typeof DEFAULT_WEBSITE_SETTINGS | undefined) ?? {};
   return { ...DEFAULT_WEBSITE_SETTINGS, ...value };
@@ -20,7 +20,7 @@ export async function saveWebsiteSettings(body: {
   address: string;
   logo?: Record<string, unknown> | null;
 }) {
-  const { Setting } = await import("../models/index.js");
+  const { Setting } = await import("../models/index.ts");
   const value = {
     name: body.name.trim(),
     email: body.email.trim(),

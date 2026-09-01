@@ -1,8 +1,8 @@
 import crypto from "node:crypto";
 import Razorpay from "razorpay";
-import { env } from "../config/env.js";
-import { redis } from "../config/redis.js";
-import { BadRequestError } from "../utils/errors.js";
+import { env } from "../config/env.ts";
+import { redis } from "../config/redis.ts";
+import { BadRequestError } from "../utils/errors.ts";
 
 export const razorpay = new Razorpay({
   key_id: env.RAZORPAY_KEY_ID,

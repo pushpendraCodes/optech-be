@@ -1,7 +1,7 @@
-import { Enquiry } from "../../models/index.js";
-import { NotFoundError } from "../../utils/errors.js";
-import { paginationMeta, type PaginationQuery } from "../../utils/pagination.js";
-import { notifyNewEnquiry } from "../../services/notification.service.js";
+import { Enquiry } from "../../models/index.ts";
+import { NotFoundError } from "../../utils/errors.ts";
+import { paginationMeta, type PaginationQuery } from "../../utils/pagination.ts";
+import { notifyNewEnquiry } from "../../services/notification.service.ts";
 
 type EnquiryInput = {
   name: string;

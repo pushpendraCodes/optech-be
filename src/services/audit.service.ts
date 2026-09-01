@@ -1,4 +1,4 @@
-import { AuditLog } from "../models/index.js";
+import { AuditLog } from "../models/index.ts";
 import type { Types } from "mongoose";
 
 const SENSITIVE = /password|token|secret|authorization/i;

@@ -1,4 +1,4 @@
-import { env } from "../config/env.js";
+import { env } from "../config/env.ts";
 
 export const openapiSpec = {
   openapi: "3.0.3",

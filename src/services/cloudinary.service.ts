@@ -1,7 +1,7 @@
 import { v2 as cloudinary, type UploadApiResponse } from "cloudinary";
-import { env } from "../config/env.js";
-import type { CloudinaryAsset } from "../types/common.js";
-import { BadRequestError } from "../utils/errors.js";
+import { env } from "../config/env.ts";
+import type { CloudinaryAsset } from "../types/common.ts";
+import { BadRequestError } from "../utils/errors.ts";
 
 cloudinary.config({
   cloud_name: env.CLOUDINARY_CLOUD_NAME,

@@ -1,8 +1,8 @@
 import { Worker } from "bullmq";
-import { redis } from "../config/redis.js";
-import { QUEUE_NAMES } from "../constants/cache.js";
-import { deliverNotification } from "../services/notification.service.js";
-import { logger } from "../config/logger.js";
+import { redis } from "../config/redis.ts";
+import { QUEUE_NAMES } from "../constants/cache.ts";
+import { deliverNotification } from "../services/notification.service.ts";
+import { logger } from "../config/logger.ts";
 
 export function startWorkers() {
   const notifications = new Worker(

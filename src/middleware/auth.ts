@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
-import { verifyAccess, type AccessPayload } from "../utils/tokens.js";
-import { ForbiddenError, UnauthorizedError } from "../utils/errors.js";
-import type { Permission } from "../constants/rbac.js";
+import { verifyAccess, type AccessPayload } from "../utils/tokens.ts";
+import { ForbiddenError, UnauthorizedError } from "../utils/errors.ts";
+import type { Permission } from "../constants/rbac.ts";
 
 declare global {
   namespace Express {

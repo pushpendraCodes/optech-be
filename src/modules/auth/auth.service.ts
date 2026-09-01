@@ -1,10 +1,10 @@
 import argon2 from "argon2";
 import { nanoid } from "nanoid";
-import { Role, Student, User } from "../../models/index.js";
-import { ForbiddenError, UnauthorizedError } from "../../utils/errors.js";
-import { saveStudentPushToken, saveStudentPushTokenIfEmpty, saveUserPushToken } from "../../utils/push-token.js";
-import { hashToken, newJti, signAccess, signRefresh, verifyRefresh } from "../../utils/tokens.js";
-import type { RoleKey } from "../../constants/rbac.js";
+import { Role, Student, User } from "../../models/index.ts";
+import { ForbiddenError, UnauthorizedError } from "../../utils/errors.ts";
+import { saveStudentPushToken, saveStudentPushTokenIfEmpty, saveUserPushToken } from "../../utils/push-token.ts";
+import { hashToken, newJti, signAccess, signRefresh, verifyRefresh } from "../../utils/tokens.ts";
+import type { RoleKey } from "../../constants/rbac.ts";
 
 async function permissionsForUser(user: { roles: unknown[] }) {
   const roles = await Role.find({ _id: { $in: user.roles } }).lean();

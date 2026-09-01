@@ -1,9 +1,9 @@
 import { Types } from "mongoose";
-import { Course, Enrollment, Installment, Payment, Setting, Student } from "../models/index.js";
-import { NotFoundError } from "../utils/errors.js";
-import { installmentPlan } from "./pricing.service.js";
-import { extractPaymentDiscount } from "./payment-discount.service.js";
-import { notifyStudents } from "./notification.service.js";
+import { Course, Enrollment, Installment, Payment, Setting, Student } from "../models/index.ts";
+import { NotFoundError } from "../utils/errors.ts";
+import { installmentPlan } from "./pricing.service.ts";
+import { extractPaymentDiscount } from "./payment-discount.service.ts";
+import { notifyStudents } from "./notification.service.ts";
 
 export async function getInstallmentSettings() {
   const row = await Setting.findOne({ key: "installments" }).lean();

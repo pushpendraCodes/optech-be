@@ -7,13 +7,13 @@ import {
   Payment,
   Student,
   User,
-} from "../../models/index.js";
-import { applyPaymentToInstallments, createEnrollmentInstallments } from "../../services/installment.service.js";
-import { extractPaymentDiscount } from "../../services/payment-discount.service.js";
-import { enqueueBroadcast } from "../../services/notification.service.js";
-import { BadRequestError, NotFoundError } from "../../utils/errors.js";
-import { hashPassword, makeReferralCode, makeStudentCode } from "../auth/auth.service.js";
-import { recordReferralFromAdmission } from "../admissions/admission.service.js";
+} from "../../models/index.ts";
+import { applyPaymentToInstallments, createEnrollmentInstallments } from "../../services/installment.service.ts";
+import { extractPaymentDiscount } from "../../services/payment-discount.service.ts";
+import { enqueueBroadcast } from "../../services/notification.service.ts";
+import { BadRequestError, NotFoundError } from "../../utils/errors.ts";
+import { hashPassword, makeReferralCode, makeStudentCode } from "../auth/auth.service.ts";
+import { recordReferralFromAdmission } from "../admissions/admission.service.ts";
 
 function parseNotes(raw?: string) {
   try {

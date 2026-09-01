@@ -1,8 +1,8 @@
-import { CourseCertificate, Enrollment, Student } from "../models/index.js";
-import { NotFoundError } from "../utils/errors.js";
-import { buildCertificatePdf } from "./pdf.service.js";
-import { getWebsiteSettings } from "./website-settings.service.js";
-import { notifyCertificateIssued } from "./notification.service.js";
+import { CourseCertificate, Enrollment, Student } from "../models/index.ts";
+import { NotFoundError } from "../utils/errors.ts";
+import { buildCertificatePdf } from "./pdf.service.ts";
+import { getWebsiteSettings } from "./website-settings.service.ts";
+import { notifyCertificateIssued } from "./notification.service.ts";
 
 function courseTitle(course: unknown) {
   if (!course || typeof course !== "object") return "Course";

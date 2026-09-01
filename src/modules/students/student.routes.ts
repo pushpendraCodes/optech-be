@@ -1,17 +1,17 @@
 import { Router } from "express";
 import { z } from "zod";
-import { authenticate, requireStudent } from "../../middleware/auth.js";
-import { validate } from "../../middleware/validate.js";
-import { asyncHandler } from "../../utils/async-handler.js";
-import { ok } from "../../utils/api-response.js";
-import * as students from "../students/student.service.js";
-import * as payments from "../payments/payment.service.js";
-import * as certificateSvc from "../../services/certificate.service.js";
-import { objectId } from "../../utils/pagination.js";
-import { Referral, Enrollment } from "../../models/index.js";
-import { preventSelfReferral, referralReward } from "../../services/pricing.service.js";
-import { Setting } from "../../models/index.js";
-import { BadRequestError } from "../../utils/errors.js";
+import { authenticate, requireStudent } from "../../middleware/auth.ts";
+import { validate } from "../../middleware/validate.ts";
+import { asyncHandler } from "../../utils/async-handler.ts";
+import { ok } from "../../utils/api-response.ts";
+import * as students from "../students/student.service.ts";
+import * as payments from "../payments/payment.service.ts";
+import * as certificateSvc from "../../services/certificate.service.ts";
+import { objectId } from "../../utils/pagination.ts";
+import { Referral, Enrollment } from "../../models/index.ts";
+import { preventSelfReferral, referralReward } from "../../services/pricing.service.ts";
+import { Setting } from "../../models/index.ts";
+import { BadRequestError } from "../../utils/errors.ts";
 
 const router = Router();
 router.use(authenticate, requireStudent);
@@ -153,7 +153,7 @@ router.post(
   "/referrals",
   validate({ body: z.object({ refereePhone: z.string().min(8) }) }),
   asyncHandler(async (req, res) => {
-    const { Student } = await import("../../models/index.js");
+    const { Student } = await import("../../models/index.ts");
     const me = await Student.findById(req.auth!.studentId);
     if (!me) throw new BadRequestError("Student missing");
     if (preventSelfReferral(me.referralCode, undefined, undefined, req.body.refereePhone)) {

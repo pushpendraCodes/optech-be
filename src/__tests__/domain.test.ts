@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { applyCoupon, installmentPlan, pickScholarshipSlab, preventSelfReferral, referralReward } from "../services/pricing.service.js";
-import { gradeQuiz, gradeTyping } from "../services/grading.service.js";
+import { applyCoupon, installmentPlan, pickScholarshipSlab, preventSelfReferral, referralReward } from "../services/pricing.service.ts";
+import { gradeQuiz, gradeTyping } from "../services/grading.service.ts";
 import crypto from "node:crypto";
 
 describe("pricing", () => {

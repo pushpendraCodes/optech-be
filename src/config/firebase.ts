@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import admin from "firebase-admin";
-import { env } from "./env.js";
-import { logger } from "./logger.js";
+import { env } from "./env.ts";
+import { logger } from "./logger.ts";
 
 type ServiceAccount = {
   project_id: string;

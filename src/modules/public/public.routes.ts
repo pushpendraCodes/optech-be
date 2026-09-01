@@ -1,16 +1,16 @@
 import { Router } from "express";
 import { z } from "zod";
-import { validate } from "../../middleware/validate.js";
-import { asyncHandler } from "../../utils/async-handler.js";
-import { ok } from "../../utils/api-response.js";
-import * as courses from "../courses/course.service.js";
-import * as cms from "../cms/cms.service.js";
-import * as payments from "../payments/payment.service.js";
-import * as scholarship from "../scholarships/scholarship.service.js";
-import * as enquiries from "../enquiries/enquiry.service.js";
-import { objectId } from "../../utils/pagination.js";
-import { env } from "../../config/env.js";
-import { indianMobileSchema, optionalIndianMobileSchema } from "../../utils/phone.js";
+import { validate } from "../../middleware/validate.ts";
+import { asyncHandler } from "../../utils/async-handler.ts";
+import { ok } from "../../utils/api-response.ts";
+import * as courses from "../courses/course.service.ts";
+import * as cms from "../cms/cms.service.ts";
+import * as payments from "../payments/payment.service.ts";
+import * as scholarship from "../scholarships/scholarship.service.ts";
+import * as enquiries from "../enquiries/enquiry.service.ts";
+import { objectId } from "../../utils/pagination.ts";
+import { env } from "../../config/env.ts";
+import { indianMobileSchema, optionalIndianMobileSchema } from "../../utils/phone.ts";
 
 const router = Router();
 

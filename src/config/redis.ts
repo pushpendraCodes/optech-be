@@ -1,6 +1,6 @@
 import Redis from "ioredis";
-import { env } from "./env.js";
-import { logger } from "./logger.js";
+import { env } from "./env.ts";
+import { logger } from "./logger.ts";
 
 const remote = !["localhost", "127.0.0.1"].includes(env.REDIS_HOST);
 
