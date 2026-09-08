@@ -9,6 +9,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
+    "backup": "tsx src/scripts/backup-mongo.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "tsc --noEmit"
@@ -36,6 +37,7 @@
     "mongoose": "^8.13.2",
     "multer": "^1.4.5-lts.2",
     "nanoid": "^5.1.5",
+    "node-cron": "^4.6.0",
     "nodemailer": "^9.1.0",
     "pdf-lib": "^1.17.1",
     "pino": "^9.6.0",

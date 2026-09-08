@@ -54,6 +54,17 @@ const EnvSchema = z.object({
   SMTP_USER: z.string().optional().default(""),
   SMTP_PASS: z.string().optional().default(""),
   EMAIL_FROM: z.string().optional().default("Optech Deori <noreply@optech-deori.edu.in>"),
+  /** Daily mongodump → Cloudinary (requires MongoDB Database Tools on PATH). */
+  BACKUP_CRON_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true"),
+  /** Cron expression (default: 02:00 daily). */
+  BACKUP_CRON: z.string().default("0 2 * * *"),
+  BACKUP_TIMEZONE: z.string().default("Asia/Kolkata"),
+  BACKUP_FOLDER: z.string().default("optech/db-backups"),
+  /** Delete Cloudinary backups older than N days (0 = keep forever). */
+  BACKUP_RETENTION_DAYS: z.coerce.number().int().min(0).default(14),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

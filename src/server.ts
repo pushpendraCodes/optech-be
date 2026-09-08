@@ -4,6 +4,7 @@ import { connectRedis } from "./config/redis.ts";
 import { env } from "./config/env.ts";
 import { firebaseApp } from "./config/firebase.ts";
 import { logger } from "./config/logger.ts";
+import { startBackupCron } from "./jobs/backup-cron.ts";
 import { startWorkers } from "./jobs/worker.ts";
 
 function muteQueueNoise() {
@@ -24,6 +25,11 @@ async function main() {
     startWorkers();
   } catch {
     logger.warn("Workers skipped");
+  }
+  try {
+    startBackupCron();
+  } catch (err) {
+    logger.warn({ err }, "Backup cron skipped");
   }
   const app = createApp();
   app.listen(env.PORT, () => {

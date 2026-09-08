@@ -56,3 +56,37 @@ export async function destroyAsset(publicId: string, resourceType = "image") {
   if (!publicId) return;
   await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
 }
+
+/** Upload arbitrary binary (e.g. mongodump .gz) as a Cloudinary raw asset. */
+export async function uploadRawBuffer(
+  buffer: Buffer,
+  folder: string,
+  filename: string,
+): Promise<CloudinaryAsset> {
+  const publicId = filename.replace(/\.[^.]+$/, "");
+  const result = await new Promise<UploadApiResponse>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        folder,
+        resource_type: "raw",
+        public_id: publicId,
+        use_filename: true,
+        unique_filename: false,
+        overwrite: true,
+      },
+      (err, res) => {
+        if (err || !res) reject(err ?? new Error("Cloudinary raw upload failed"));
+        else resolve(res);
+      },
+    );
+    stream.end(buffer);
+  });
+
+  return {
+    publicId: result.public_id,
+    url: result.secure_url,
+    resourceType: result.resource_type,
+    format: result.format,
+    bytes: result.bytes,
+  };
+}
