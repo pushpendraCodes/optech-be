@@ -565,6 +565,71 @@ const QuizAttemptSchema = new Schema<QuizAttemptDoc>(
 );
 QuizAttemptSchema.index({ quiz: 1, student: 1, status: 1 });
 
+export interface ExamDoc extends Document {
+  title: string;
+  description?: string;
+  course: Types.ObjectId;
+  subject?: string;
+  minutes: number;
+  passing: number;
+  negative: boolean;
+  negativeValue: number;
+  scheduledAt?: Date;
+  endsAt?: Date;
+  open: boolean;
+  questions: QuizQuestion[];
+}
+const ExamSchema = new Schema<ExamDoc>(
+  {
+    title: String,
+    description: String,
+    course: { type: Schema.Types.ObjectId, ref: "Course", index: true },
+    subject: { type: String, index: true },
+    minutes: Number,
+    passing: Number,
+    negative: { type: Boolean, default: false },
+    negativeValue: { type: Number, default: 0.25 },
+    scheduledAt: Date,
+    endsAt: Date,
+    open: { type: Boolean, default: false, index: true },
+    questions: [QuizQuestionSchema],
+  },
+  { timestamps: true },
+);
+
+export interface ExamAttemptDoc extends Document {
+  exam: Types.ObjectId;
+  student: Types.ObjectId;
+  startedAt: Date;
+  submittedAt?: Date;
+  answers: { questionId: string; value: string | number }[];
+  score?: number;
+  percent?: number;
+  correct?: number;
+  wrong?: number;
+  skipped?: number;
+  timeTakenSeconds?: number;
+  status: "in_progress" | "submitted" | "auto_submitted";
+}
+const ExamAttemptSchema = new Schema<ExamAttemptDoc>(
+  {
+    exam: { type: Schema.Types.ObjectId, ref: "Exam", required: true },
+    student: { type: Schema.Types.ObjectId, ref: "Student", required: true },
+    startedAt: Date,
+    submittedAt: Date,
+    answers: [{ questionId: String, value: Schema.Types.Mixed }],
+    score: Number,
+    percent: Number,
+    correct: Number,
+    wrong: Number,
+    skipped: Number,
+    timeTakenSeconds: Number,
+    status: { type: String, enum: ["in_progress", "submitted", "auto_submitted"], default: "in_progress" },
+  },
+  { timestamps: true },
+);
+ExamAttemptSchema.index({ exam: 1, student: 1, status: 1 });
+
 export interface TypingParagraphDoc extends Document {
   language: "en" | "hi";
   text: string;
@@ -798,6 +863,8 @@ export interface AlumniDoc extends Document {
   role?: string;
   story?: string;
   photo?: CloudinaryAsset;
+  youtubeUrl?: string;
+  youtubeId?: string;
   featured: boolean;
   published: boolean;
 }
@@ -809,6 +876,8 @@ const AlumniSchema = new Schema<AlumniDoc>(
     role: String,
     story: String,
     photo: AssetSchema,
+    youtubeUrl: String,
+    youtubeId: String,
     featured: { type: Boolean, default: false },
     published: { type: Boolean, default: true },
   },
@@ -959,6 +1028,8 @@ export interface CmsItemDoc extends Document {
   href?: string;
   cta?: string;
   image?: CloudinaryAsset;
+  /** Multiple popup images/videos; `image` stays as the first for backwards compatibility. */
+  media?: CloudinaryAsset[];
   slot?: string;
   active: boolean;
   startsAt?: Date;
@@ -973,6 +1044,7 @@ const CmsItemSchema = new Schema<CmsItemDoc>(
     href: String,
     cta: String,
     image: AssetSchema,
+    media: [AssetSchema],
     slot: String,
     active: { type: Boolean, default: true },
     startsAt: Date,
@@ -1060,6 +1132,60 @@ const CourseCertificateSchema = new Schema<CourseCertificateDoc>(
 );
 CourseCertificateSchema.index({ student: 1, issuedAt: -1 });
 
+export interface ExternalAdmissionInstallment {
+  amount?: number;
+  date?: string;
+}
+
+export interface ExternalAdmissionDoc extends Document {
+  serialNo?: number;
+  studentName: string;
+  batchTime?: string;
+  address?: string;
+  course?: string;
+  admissionDate?: string;
+  contactNo?: string;
+  klic120?: string;
+  klic60?: string;
+  klic30?: string;
+  installments: ExternalAdmissionInstallment[];
+  paidFees?: number;
+  balanceFees?: number;
+  totalFees?: number;
+  sessionLabel?: string;
+  programLabel?: string;
+  source: "manual" | "excel";
+}
+const ExternalAdmissionSchema = new Schema<ExternalAdmissionDoc>(
+  {
+    serialNo: { type: Number, index: true },
+    studentName: { type: String, required: true, trim: true, index: true },
+    batchTime: { type: String, trim: true },
+    address: { type: String, trim: true },
+    course: { type: String, trim: true, index: true },
+    admissionDate: { type: String, trim: true },
+    contactNo: { type: String, trim: true, index: true },
+    klic120: { type: String, trim: true },
+    klic60: { type: String, trim: true },
+    klic30: { type: String, trim: true },
+    installments: [
+      {
+        amount: Number,
+        date: String,
+      },
+    ],
+    paidFees: { type: Number, default: 0 },
+    balanceFees: { type: Number, default: 0 },
+    totalFees: { type: Number, default: 0 },
+    sessionLabel: { type: String, trim: true, index: true, default: "ADMISSION-2026" },
+    programLabel: { type: String, trim: true, default: "MS-CIT + KLiC" },
+    source: { type: String, enum: ["manual", "excel"], default: "manual" },
+  },
+  { timestamps: true },
+);
+ExternalAdmissionSchema.index({ createdAt: -1 });
+ExternalAdmissionSchema.index({ studentName: "text", contactNo: "text", course: "text", address: "text" });
+
 export interface EnquiryDoc extends Document {
   name: string;
   email: string;
@@ -1100,6 +1226,8 @@ export const Attendance = mongoose.model("Attendance", AttendanceSchema);
 export const Quiz = mongoose.model("Quiz", QuizSchema);
 export const QuestionBank = mongoose.model("QuestionBank", QuestionBankSchema);
 export const QuizAttempt = mongoose.model("QuizAttempt", QuizAttemptSchema);
+export const Exam = mongoose.model("Exam", ExamSchema);
+export const ExamAttempt = mongoose.model("ExamAttempt", ExamAttemptSchema);
 export const TypingParagraph = mongoose.model("TypingParagraph", TypingParagraphSchema);
 export const TypingAttempt = mongoose.model("TypingAttempt", TypingAttemptSchema);
 export const StudyMaterial = mongoose.model("StudyMaterial", StudyMaterialSchema);
@@ -1123,4 +1251,5 @@ export const Translation = mongoose.model("Translation", TranslationSchema);
 export const AuditLog = mongoose.model("AuditLog", AuditLogSchema);
 export const DigitalIdCard = mongoose.model("DigitalIdCard", DigitalIdCardSchema);
 export const CourseCertificate = mongoose.model("CourseCertificate", CourseCertificateSchema);
+export const ExternalAdmission = mongoose.model("ExternalAdmission", ExternalAdmissionSchema);
 export const Enquiry = mongoose.model("Enquiry", EnquirySchema);

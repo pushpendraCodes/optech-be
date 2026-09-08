@@ -239,6 +239,8 @@ export async function buildIdCardPdf(opts: {
   email?: string;
   address?: string;
   photoUrl?: string;
+  logoUrl?: string;
+  instituteName?: string;
 }) {
   const W = 320;
   const H = 500;
@@ -247,6 +249,7 @@ export async function buildIdCardPdf(opts: {
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const photo = await embedPhoto(doc, opts.photoUrl);
+  const logo = await embedPhoto(doc, opts.logoUrl);
 
   page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: CREAM });
 
@@ -255,9 +258,36 @@ export async function buildIdCardPdf(opts: {
   page.drawSvgPath(`M ${W - 48},${H} L ${W},${H} L ${W},${H - 32} Z`, { color: BROWN_DARK });
   page.drawSvgPath(`M ${W - 30},${H} L ${W},${H} L ${W},${H - 20} Z`, { color: BROWN_DARK, opacity: 0.75 });
 
-  drawLogo(page, 38, H - headerH / 2 - 2, 18);
-  page.drawText("OPTECH", { x: 66, y: H - 36, size: 16, font: bold, color: WHITE });
-  page.drawText("COMPUTER INSTITUTE", { x: 66, y: H - 52, size: 8, font: bold, color: WHITE });
+  const brand = (opts.instituteName || "Optech Computer Institute").trim();
+  const brandMain = brand.split(/\s+/)[0]?.toUpperCase() || "OPTECH";
+  const brandSub = brand.replace(new RegExp(`^${brand.split(/\s+/)[0]}\\s*`, "i"), "").toUpperCase() || "COMPUTER INSTITUTE";
+
+  let textX = 66;
+  if (logo) {
+    const maxH = 44;
+    const maxW = 44;
+    const scale = Math.min(maxW / logo.width, maxH / logo.height, 1);
+    const drawW = logo.width * scale;
+    const drawH = logo.height * scale;
+    const logoX = 16;
+    const logoY = H - headerH / 2 - drawH / 2;
+    page.drawRectangle({
+      x: logoX - 2,
+      y: logoY - 2,
+      width: drawW + 4,
+      height: drawH + 4,
+      color: WHITE,
+    });
+    page.drawImage(logo, { x: logoX, y: logoY, width: drawW, height: drawH });
+    textX = logoX + drawW + 10;
+  } else {
+    drawLogo(page, 38, H - headerH / 2 - 2, 18);
+  }
+
+  page.drawText(brandMain.slice(0, 18), { x: textX, y: H - 36, size: 14, font: bold, color: WHITE });
+  if (brandSub) {
+    page.drawText(brandSub.slice(0, 28), { x: textX, y: H - 52, size: 7, font: bold, color: WHITE });
+  }
 
   // Top-left accent under header
   page.drawSvgPath(
@@ -392,6 +422,7 @@ export async function buildCertificatePdf(opts: {
   certificateNumber: string;
   issuedDate: string;
   studentCode?: string;
+  logoUrl?: string;
 }) {
   const W = 842;
   const H = 595;
@@ -401,6 +432,7 @@ export async function buildCertificatePdf(opts: {
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const titleFont = await doc.embedFont(StandardFonts.TimesRomanBold);
   const scriptFont = await doc.embedFont(StandardFonts.TimesRomanBoldItalic);
+  const logo = await embedPhoto(doc, opts.logoUrl);
 
   const BLACK = rgb(0.06, 0.06, 0.08);
   const GOLD = rgb(0.83, 0.64, 0.18);
@@ -416,10 +448,26 @@ export async function buildCertificatePdf(opts: {
   }
   drawCertificateBorder(page, W, H, GOLD, GOLD_LIGHT);
 
+  let topY = H - 36;
+  if (logo) {
+    const maxH = 52;
+    const maxW = 180;
+    const scale = Math.min(maxW / logo.width, maxH / logo.height, 1);
+    const drawW = logo.width * scale;
+    const drawH = logo.height * scale;
+    page.drawImage(logo, {
+      x: (W - drawW) / 2,
+      y: topY - drawH,
+      width: drawW,
+      height: drawH,
+    });
+    topY = topY - drawH - 14;
+  }
+
   const institute = (opts.instituteName || "Optech Computer Institute").toUpperCase();
   const ribbonW = Math.min(340, bold.widthOfTextAtSize(institute, 11) + 48);
   const ribbonX = (W - ribbonW) / 2;
-  const ribbonY = H - 98;
+  const ribbonY = topY - 34;
   page.drawRectangle({ x: ribbonX, y: ribbonY, width: ribbonW, height: 34, color: GOLD });
   page.drawSvgPath(`M ${ribbonX},${ribbonY} L ${ribbonX - 20},${ribbonY + 17} L ${ribbonX},${ribbonY + 34} Z`, {
     color: GOLD_LIGHT,
@@ -434,13 +482,15 @@ export async function buildCertificatePdf(opts: {
   const mainTitle = "Certificate of Completion";
   const titleSize = 34;
   const titleW = titleFont.widthOfTextAtSize(mainTitle, titleSize);
-  page.drawText(mainTitle, { x: (W - titleW) / 2, y: H - 158, size: titleSize, font: titleFont, color: WHITE });
+  const titleY = ribbonY - 48;
+  page.drawText(mainTitle, { x: (W - titleW) / 2, y: titleY, size: titleSize, font: titleFont, color: WHITE });
 
   const sub = "This Certificate Is Proudly Presented To";
   const subW = font.widthOfTextAtSize(sub, 11);
-  page.drawText(sub, { x: (W - subW) / 2, y: H - 188, size: 11, font, color: MUTED });
+  const subY = titleY - 30;
+  page.drawText(sub, { x: (W - subW) / 2, y: subY, size: 11, font, color: MUTED });
 
-  const divY = H - 204;
+  const divY = subY - 16;
   page.drawLine({ start: { x: W / 2 - 130, y: divY }, end: { x: W / 2 - 10, y: divY }, thickness: 0.9, color: GOLD });
   page.drawLine({ start: { x: W / 2 + 10, y: divY }, end: { x: W / 2 + 130, y: divY }, thickness: 0.9, color: GOLD });
   page.drawSvgPath(`M ${W / 2},${divY + 6} L ${W / 2 + 6},${divY} L ${W / 2},${divY - 6} L ${W / 2 - 6},${divY} Z`, {
@@ -449,9 +499,10 @@ export async function buildCertificatePdf(opts: {
 
   const nameSize = 30;
   const nameW = scriptFont.widthOfTextAtSize(opts.studentName, nameSize);
+  const nameY = divY - 42;
   page.drawText(opts.studentName, {
     x: (W - nameW) / 2,
-    y: H - 252,
+    y: nameY,
     size: nameSize,
     font: scriptFont,
     color: GOLD_LIGHT,
@@ -459,7 +510,7 @@ export async function buildCertificatePdf(opts: {
 
   const body = `For successfully completing the course "${opts.courseTitle}" at ${opts.instituteName}, demonstrating dedication, skill, and commitment to excellence.`;
   const bodyLines = wrapText(font, body, 10, W - 180);
-  let bodyY = H - 292;
+  let bodyY = nameY - 36;
   for (const line of bodyLines.slice(0, 4)) {
     const lw = font.widthOfTextAtSize(line, 10);
     page.drawText(line, { x: (W - lw) / 2, y: bodyY, size: 10, font, color: MUTED });

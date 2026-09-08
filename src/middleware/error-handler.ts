@@ -34,6 +34,17 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     });
   }
 
+  const multerErr = err as { name?: string; code?: string };
+  if (multerErr.name === "MulterError") {
+    const tooLarge = multerErr.code === "LIMIT_FILE_SIZE";
+    return res.status(400).json({
+      success: false,
+      message: tooLarge ? "File must be 100 MB or smaller" : "Upload failed",
+      errors: [],
+      code: tooLarge ? "FILE_TOO_LARGE" : "UPLOAD_ERROR",
+    });
+  }
+
   const dup = err as { code?: number };
   if (dup.code === 11000) {
     const key = Object.keys((err as { keyPattern?: Record<string, unknown> }).keyPattern ?? {})[0];

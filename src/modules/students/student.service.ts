@@ -7,6 +7,8 @@ import {
   Notice,
   NotificationReceipt,
   Payment,
+  Exam,
+  ExamAttempt,
   Quiz,
   QuizAttempt,
   Student,
@@ -21,6 +23,7 @@ import { gradeQuiz, gradeTyping } from "../../services/grading.service.ts";
 import { buildIdCardPdf } from "../../services/pdf.service.ts";
 import { computeStudentFees, studentIdsWithOutstandingFees } from "../../services/installment.service.ts";
 import { certificatesForEnrollments } from "../../services/certificate.service.ts";
+import { getWebsiteSettings } from "../../services/website-settings.service.ts";
 import { paginationMeta } from "../../utils/pagination.ts";
 import { saveStudentPushTokenIfEmpty } from "../../utils/push-token.ts";
 import type { PaginationQuery } from "../../utils/pagination.ts";
@@ -291,6 +294,95 @@ export async function submitQuiz(attemptId: string, studentId: string, answers: 
   };
 }
 
+export async function myExams(studentId: string) {
+  const ens = await Enrollment.find({ student: studentId, status: "active" }).select("course");
+  const rows = await Exam.find({ course: { $in: ens.map((e) => e.course) }, open: true })
+    .populate("course", "title slug")
+    .select("title description course subject minutes passing negative open scheduledAt questions")
+    .sort({ scheduledAt: -1, title: 1 })
+    .lean();
+  return rows.map((q) => ({
+    ...q,
+    questionCount: q.questions?.length ?? 0,
+    totalMarks: (q.questions ?? []).reduce((s, x) => s + (x.marks ?? 1), 0),
+    questions: undefined,
+  }));
+}
+
+export async function myExamAttempts(studentId: string) {
+  return ExamAttempt.find({ student: studentId, status: { $ne: "in_progress" } })
+    .populate("exam", "title passing")
+    .sort({ submittedAt: -1 })
+    .lean();
+}
+
+export async function startExam(examId: string, studentId: string) {
+  const exam = await Exam.findById(examId);
+  if (!exam || !exam.open) throw new NotFoundError("Exam not available");
+  const existing = await ExamAttempt.findOne({ exam: examId, student: studentId, status: "in_progress" });
+  if (existing) return { attempt: existing, exam: publicExam(exam) };
+  const attempt = await ExamAttempt.create({
+    exam: examId,
+    student: studentId,
+    startedAt: new Date(),
+    answers: [],
+    status: "in_progress",
+  });
+  return { attempt, exam: publicExam(exam) };
+}
+
+function publicExam(exam: InstanceType<typeof Exam>) {
+  const totalMarks = exam.questions.reduce((s, q) => s + (q.marks ?? 1), 0);
+  return {
+    id: exam._id,
+    title: exam.title,
+    description: exam.description,
+    minutes: exam.minutes,
+    passing: exam.passing,
+    negative: exam.negative,
+    negativeValue: exam.negativeValue,
+    questionCount: exam.questions.length,
+    totalMarks,
+    questions: exam.questions.map((q, i) => ({
+      id: String(i),
+      type: q.type,
+      prompt: q.prompt,
+      options: q.options,
+      marks: q.marks,
+    })),
+  };
+}
+
+export async function submitExam(attemptId: string, studentId: string, answers: { index: number; value: string | number }[]) {
+  const attempt = await ExamAttempt.findOne({ _id: attemptId, student: studentId });
+  if (!attempt) throw new NotFoundError("Attempt not found");
+  if (attempt.status !== "in_progress") throw new ForbiddenError("Already submitted");
+  const exam = await Exam.findById(attempt.exam);
+  if (!exam) throw new NotFoundError("Exam not found");
+  const elapsedMs = Date.now() - attempt.startedAt.getTime();
+  const elapsed = elapsedMs / 60000;
+  const auto = elapsed > exam.minutes + 0.5;
+  const result = gradeQuiz(exam.questions, answers, exam.negative, exam.negativeValue);
+  attempt.answers = answers.map((a) => ({ questionId: String(a.index), value: a.value }));
+  attempt.score = result.score;
+  attempt.percent = result.percent;
+  attempt.correct = result.correct;
+  attempt.wrong = result.wrong;
+  attempt.skipped = result.skipped;
+  attempt.timeTakenSeconds = Math.round(elapsedMs / 1000);
+  attempt.submittedAt = new Date();
+  attempt.status = auto ? "auto_submitted" : "submitted";
+  await attempt.save();
+  return {
+    ...result,
+    passing: exam.passing,
+    passed: result.percent >= exam.passing,
+    timeTakenSeconds: attempt.timeTakenSeconds,
+    negative: exam.negative,
+    negativeValue: exam.negativeValue,
+  };
+}
+
 export async function listTypingParagraphs() {
   return TypingParagraph.find({ active: true })
     .select("_id language text createdAt")
@@ -338,6 +430,9 @@ export async function idCard(studentId: string) {
   const user = student.user as unknown as { name: string; phone?: string; email?: string };
   const ens = await Enrollment.findOne({ student: studentId, status: "active" }).populate("course");
   const courseTitle = (ens?.course as { title?: { en?: string } } | undefined)?.title?.en ?? "Optech";
+  const site = await getWebsiteSettings();
+  const logo = site.logo as { url?: string } | string | null | undefined;
+  const logoUrl = typeof logo === "string" ? logo : logo?.url;
   const pdf = await buildIdCardPdf({
     name: user.name,
     studentCode: student.studentCode,
@@ -348,6 +443,8 @@ export async function idCard(studentId: string) {
     email: user.email,
     address: student.address,
     photoUrl: student.photo?.url,
+    logoUrl,
+    instituteName: site.name,
   });
   await DigitalIdCard.findOneAndUpdate(
     { student: studentId },

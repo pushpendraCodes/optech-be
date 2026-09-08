@@ -83,4 +83,33 @@ router.post(
   }),
 );
 
+router.get(
+  "/me",
+  authenticate,
+  asyncHandler(async (req, res) => {
+    const data = await auth.getMe(req.auth!.sub);
+    return ok(res, data);
+  }),
+);
+
+router.patch(
+  "/account",
+  authenticate,
+  validate({
+    body: z
+      .object({
+        currentPassword: z.string().min(4),
+        email: z.string().email().optional(),
+        newPassword: z.string().min(8).optional(),
+      })
+      .refine((v) => Boolean(v.email || v.newPassword), {
+        message: "Provide a new email and/or new password",
+      }),
+  }),
+  asyncHandler(async (req, res) => {
+    const data = await auth.updateAccount(req.auth!.sub, req.body);
+    return ok(res, data, data.passwordChanged ? "Account updated — sign in again" : "Account updated");
+  }),
+);
+
 export default router;

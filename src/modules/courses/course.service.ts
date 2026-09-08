@@ -93,7 +93,10 @@ export async function upsertBatch(courseId: string, body: Record<string, unknown
   if (body.id) {
     return updateBatch(String(body.id), body);
   }
-  return Batch.create({ ...body, course: courseId });
+  const doc = await Batch.create({ ...body, course: courseId });
+  await cache.del(CACHE_KEYS.live);
+  await cache.delByPrefix(CACHE_KEYS.courses);
+  return doc;
 }
 
 export async function updateBatch(id: string, body: Record<string, unknown>) {
@@ -101,6 +104,7 @@ export async function updateBatch(id: string, body: Record<string, unknown>) {
   const doc = await Batch.findByIdAndUpdate(id, rest, { new: true });
   if (!doc) throw new NotFoundError("Batch not found");
   await cache.delByPrefix(CACHE_KEYS.courses);
+  await cache.del(CACHE_KEYS.live);
   return doc;
 }
 
@@ -108,6 +112,7 @@ export async function deleteBatch(id: string) {
   const doc = await Batch.findByIdAndDelete(id);
   if (!doc) throw new NotFoundError("Batch not found");
   await cache.delByPrefix(CACHE_KEYS.courses);
+  await cache.del(CACHE_KEYS.live);
   return doc;
 }
 

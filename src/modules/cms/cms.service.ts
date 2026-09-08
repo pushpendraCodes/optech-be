@@ -1,5 +1,7 @@
 import { CmsItem, Alumni, Job, Notice } from "../../models/index.ts";
+import type { CloudinaryAsset } from "../../types/common.ts";
 import * as gallery from "../gallery/gallery.service.ts";
+import * as live from "../live/live.service.ts";
 import { cache } from "../../services/cache.service.ts";
 import { CACHE_KEYS } from "../../constants/cache.ts";
 
@@ -27,6 +29,39 @@ async function ensureSingleActivePopup(exceptId?: string) {
   await CmsItem.updateMany(filter, { $set: { active: false } });
 }
 
+function asAsset(value: unknown): CloudinaryAsset | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const url = String(row.url ?? "").trim();
+  if (!url) return null;
+  return {
+    publicId: String(row.publicId ?? ""),
+    url,
+    resourceType: String(row.resourceType ?? "image"),
+    format: row.format ? String(row.format) : undefined,
+    bytes: typeof row.bytes === "number" ? row.bytes : undefined,
+    width: typeof row.width === "number" ? row.width : undefined,
+    height: typeof row.height === "number" ? row.height : undefined,
+  };
+}
+
+/** Normalize popup `media[]` and keep legacy `image` as first item. */
+function normalizePopupMedia(body: Record<string, unknown>) {
+  if (String(body.kind ?? "") !== "popup") return body;
+
+  const fromMedia = Array.isArray(body.media)
+    ? (body.media as unknown[]).map(asAsset).filter((item): item is CloudinaryAsset => Boolean(item))
+    : [];
+  const legacy = asAsset(body.image);
+  const media = fromMedia.length ? fromMedia : legacy ? [legacy] : [];
+
+  return {
+    ...body,
+    media,
+    image: media[0] ?? undefined,
+  };
+}
+
 export async function publicCms(kind: "marquee" | "ad" | "popup" | "link") {
   const key =
     kind === "marquee"
@@ -39,7 +74,16 @@ export async function publicCms(kind: "marquee" | "ad" | "popup" | "link") {
 
   return cache.remember(key, TTL, async () => {
     if (kind === "popup") {
-      return CmsItem.find({ kind, ...activeNow() }).sort({ sortOrder: 1, updatedAt: -1 }).limit(1).lean();
+      const rows = await CmsItem.find({ kind, ...activeNow() }).sort({ sortOrder: 1, updatedAt: -1 }).limit(1).lean();
+      return rows.map((row) => {
+        const media =
+          Array.isArray(row.media) && row.media.length
+            ? row.media
+            : row.image
+              ? [row.image]
+              : [];
+        return { ...row, media, image: media[0] ?? row.image };
+      });
     }
     return CmsItem.find({ kind, ...activeNow() }).sort({ sortOrder: 1 }).lean();
   });
@@ -73,20 +117,21 @@ export async function publicJobs() {
 }
 
 export async function publicLive() {
-  return [];
+  return live.publicClassroomLive();
 }
 
 export async function saveCms(body: Record<string, unknown>) {
   const kind = String(body.kind ?? "");
   const makingActive = body.active !== false;
+  const payload = normalizePopupMedia(body);
 
   if (kind === "popup" && makingActive) {
     await ensureSingleActivePopup(body.id ? String(body.id) : undefined);
   }
 
   const doc = body.id
-    ? await CmsItem.findByIdAndUpdate(String(body.id), body, { new: true })
-    : await CmsItem.create(body);
+    ? await CmsItem.findByIdAndUpdate(String(body.id), payload, { new: true })
+    : await CmsItem.create(payload);
   await bumpCmsCache();
   return doc;
 }
@@ -95,12 +140,13 @@ export async function updateCms(id: string, body: Record<string, unknown>) {
   const existing = await CmsItem.findById(id).lean();
   const kind = String(body.kind ?? existing?.kind ?? "");
   const nextActive = body.active !== undefined ? Boolean(body.active) : Boolean(existing?.active);
+  const payload = normalizePopupMedia({ ...body, kind });
 
   if (kind === "popup" && nextActive) {
     await ensureSingleActivePopup(id);
   }
 
-  const doc = await CmsItem.findByIdAndUpdate(id, body, { new: true });
+  const doc = await CmsItem.findByIdAndUpdate(id, payload, { new: true });
   await bumpCmsCache();
   return doc;
 }

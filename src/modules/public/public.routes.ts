@@ -9,6 +9,7 @@ import * as payments from "../payments/payment.service.ts";
 import * as scholarship from "../scholarships/scholarship.service.ts";
 import * as enquiries from "../enquiries/enquiry.service.ts";
 import * as videoSvc from "../videos/video.service.ts";
+import * as siteSettings from "../../services/website-settings.service.ts";
 import { objectId } from "../../utils/pagination.ts";
 import { env } from "../../config/env.ts";
 import { indianMobileSchema, optionalIndianMobileSchema } from "../../utils/phone.ts";
@@ -163,6 +164,7 @@ router.post(
 );
 
 router.get("/config", (_req, res) => ok(res, { razorpayKeyId: env.RAZORPAY_KEY_ID }));
+router.get("/settings/website", asyncHandler(async (_req, res) => ok(res, await siteSettings.getWebsiteSettings())));
 router.get("/health", (_req, res) => ok(res, { ok: true }));
 
 export default router;

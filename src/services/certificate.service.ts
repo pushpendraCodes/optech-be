@@ -15,6 +15,16 @@ function formatIssueDate(date: Date) {
   return date.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
 }
 
+function logoUrlFromSettings(logo: unknown): string | undefined {
+  if (!logo) return undefined;
+  if (typeof logo === "string") return logo || undefined;
+  if (typeof logo === "object" && "url" in logo) {
+    const url = (logo as { url?: unknown }).url;
+    return url ? String(url) : undefined;
+  }
+  return undefined;
+}
+
 async function nextCertificateNumber() {
   const year = new Date().getFullYear();
   const start = new Date(`${year}-01-01T00:00:00.000Z`);
@@ -85,6 +95,7 @@ export async function buildCertificatePdfForEnrollment(enrollmentId: string) {
     certificateNumber: cert.certificateNumber,
     issuedDate: formatIssueDate(issuedAt),
     studentCode: student.studentCode,
+    logoUrl: logoUrlFromSettings(site.logo),
   });
 }
 

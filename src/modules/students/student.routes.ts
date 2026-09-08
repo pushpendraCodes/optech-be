@@ -24,6 +24,8 @@ router.get("/attendance", asyncHandler(async (req, res) =>
 router.get("/notes", asyncHandler(async (req, res) => ok(res, await students.myNotes(req.auth!.studentId!))));
 router.get("/quizzes", asyncHandler(async (req, res) => ok(res, await students.myQuizzes(req.auth!.studentId!))));
 router.get("/quiz-attempts", asyncHandler(async (req, res) => ok(res, await students.myQuizAttempts(req.auth!.studentId!))));
+router.get("/exams", asyncHandler(async (req, res) => ok(res, await students.myExams(req.auth!.studentId!))));
+router.get("/exam-attempts", asyncHandler(async (req, res) => ok(res, await students.myExamAttempts(req.auth!.studentId!))));
 
 // Notifications — paginated, polled by frontend every 5s
 router.get(
@@ -86,6 +88,21 @@ router.post(
   }),
   asyncHandler(async (req, res) =>
     ok(res, await students.submitQuiz(req.params.id, req.auth!.studentId!, req.body.answers)),
+  ),
+);
+router.post(
+  "/exams/:id/start",
+  asyncHandler(async (req, res) => ok(res, await students.startExam(req.params.id, req.auth!.studentId!))),
+);
+router.post(
+  "/exams/attempts/:id/submit",
+  validate({
+    body: z.object({
+      answers: z.array(z.object({ index: z.number(), value: z.union([z.string(), z.number()]) })),
+    }),
+  }),
+  asyncHandler(async (req, res) =>
+    ok(res, await students.submitExam(req.params.id, req.auth!.studentId!, req.body.answers)),
   ),
 );
 

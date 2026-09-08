@@ -4,6 +4,7 @@ import { cache } from "../../services/cache.service.ts";
 import { CACHE_KEYS } from "../../constants/cache.ts";
 import { NotFoundError, ValidationError } from "../../utils/errors.ts";
 import type { CloudinaryAsset } from "../../types/common.ts";
+import { parseYoutubeUrl } from "../gallery/gallery.service.ts";
 
 const assetSchema = z.object({
   publicId: z.string().optional(),
@@ -17,6 +18,7 @@ const alumniBodySchema = z.object({
   batchYear: z.string().min(2),
   role: z.string().optional(),
   story: z.string().optional(),
+  youtubeUrl: z.string().optional(),
   photo: assetSchema.optional().nullable(),
   featured: z.boolean().optional(),
   published: z.boolean().optional(),
@@ -30,6 +32,16 @@ function parseBody(body: unknown) {
   return parsed.data;
 }
 
+function resolveYoutube(url?: string) {
+  const youtubeUrl = (url ?? "").trim();
+  if (!youtubeUrl) return { youtubeUrl: null as string | null, youtubeId: null as string | null };
+  const youtubeId = parseYoutubeUrl(youtubeUrl);
+  if (!youtubeId) {
+    throw new ValidationError("Enter a valid YouTube video link (youtube.com or youtu.be)");
+  }
+  return { youtubeUrl, youtubeId };
+}
+
 async function bumpCache() {
   await cache.del(CACHE_KEYS.alumni);
 }
@@ -37,9 +49,12 @@ async function bumpCache() {
 export async function createAlumni(body: unknown) {
   const parsed = parseBody(body);
   if (!parsed.photo?.url) throw new ValidationError("Upload an alumni photo");
+  const yt = resolveYoutube(parsed.youtubeUrl);
   const row = await Alumni.create({
     ...parsed,
     photo: parsed.photo as CloudinaryAsset,
+    youtubeUrl: yt.youtubeUrl,
+    youtubeId: yt.youtubeId,
     featured: parsed.featured ?? false,
     published: parsed.published ?? true,
   });
@@ -55,17 +70,21 @@ export async function updateAlumni(id: string, body: unknown) {
     batchYear: existing.batchYear,
     role: existing.role,
     story: existing.story,
+    youtubeUrl: existing.youtubeUrl,
     photo: existing.photo,
     featured: existing.featured,
     published: existing.published,
     ...(body as Record<string, unknown>),
   });
   if (!parsed.photo?.url) throw new ValidationError("Upload an alumni photo");
+  const yt = resolveYoutube(parsed.youtubeUrl);
   existing.name = parsed.name;
   existing.batchYear = parsed.batchYear;
   existing.role = parsed.role;
   existing.story = parsed.story;
   existing.photo = parsed.photo as CloudinaryAsset;
+  existing.youtubeUrl = yt.youtubeUrl;
+  existing.youtubeId = yt.youtubeId;
   existing.featured = parsed.featured ?? existing.featured;
   existing.published = parsed.published ?? existing.published;
   await existing.save();

@@ -1,4 +1,4 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import multer from "multer";
 import { z } from "zod";
 import { authenticate, requirePermission, requireAnyPermission, requireStaff } from "../../middleware/auth.ts";
@@ -16,6 +16,8 @@ import * as gallery from "../gallery/gallery.service.ts";
 import * as live from "../live/live.service.ts";
 import * as scholarship from "../scholarships/scholarship.service.ts";
 import * as quizzes from "../quizzes/quiz.service.ts";
+import * as exams from "../exams/exam.service.ts";
+import * as external from "../external/external.service.ts";
 import * as staff from "../staff/staff.service.ts";
 import * as alumni from "../alumni/alumni.service.ts";
 import * as videos from "../videos/video.service.ts";
@@ -64,6 +66,8 @@ import {
   Installment,
   Payment,
   QuizAttempt,
+  ExamAttempt,
+  CourseCertificate,
   Referral,
   TypingAttempt,
 } from "../../models/index.ts";
@@ -73,7 +77,7 @@ import * as installmentSvc from "../../services/installment.service.ts";
 import * as siteSettings from "../../services/website-settings.service.ts";
 import type { Permission } from "../../constants/rbac.ts";
 
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 15 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } });
 const router = Router();
 router.use(authenticate, requireStaff);
 
@@ -208,6 +212,30 @@ router.get(
 );
 
 router.post("/quizzes", requirePermission("quiz:write"), asyncHandler(async (req, res) => created(res, await quizzes.createQuiz(req.body))));
+router.post("/exams", requirePermission("quiz:write"), asyncHandler(async (req, res) => created(res, await exams.createExam(req.body))));
+router.post("/external-admissions", requirePermission("admission:write"), asyncHandler(async (req, res) =>
+  created(res, await external.createExternalAdmission(req.body)),
+));
+router.post(
+  "/external-admissions/import",
+  requirePermission("admission:write"),
+  validate({
+    body: z.object({
+      rows: z.array(z.record(z.unknown())).min(1).max(2000),
+      sessionLabel: z.string().trim().optional(),
+      programLabel: z.string().trim().optional(),
+    }),
+  }),
+  asyncHandler(async (req, res) =>
+    ok(
+      res,
+      await external.importExternalAdmissions(req.body.rows, {
+        sessionLabel: req.body.sessionLabel,
+        programLabel: req.body.programLabel,
+      }),
+    ),
+  ),
+);
 router.post("/notes", requirePermission("notes:write"), asyncHandler(async (req, res) => {
   const row = await StudyMaterial.create(req.body);
   void notifyStudyMaterial(row.toObject());
@@ -447,6 +475,39 @@ router.post(
   asyncHandler(async (req, res) => ok(res, await quizzes.addQuestionsFromBank(req.params.id, req.body.bankIds))),
 );
 
+router.get("/exams", requirePermission("quiz:read"), validate({ query: exams.examListQuery }), asyncHandler(async (req, res) => {
+  const data = await exams.listExams(req.query as never);
+  return ok(res, data.items, "OK", data.meta);
+}));
+router.get(
+  "/external-admissions",
+  requirePermission("admission:read"),
+  validate({ query: external.externalListQuery }),
+  asyncHandler(async (req, res) => {
+    const data = await external.listExternalAdmissions(req.query as never);
+    return ok(res, data.items, "OK", data.meta);
+  }),
+);
+router.get("/external-admissions/:id", requirePermission("admission:read"), asyncHandler(async (req, res) =>
+  ok(res, await external.getExternalAdmission(req.params.id)),
+));
+router.patch("/external-admissions/:id", requirePermission("admission:write"), asyncHandler(async (req, res) =>
+  ok(res, await external.updateExternalAdmission(req.params.id, req.body)),
+));
+router.delete("/external-admissions/:id", requirePermission("admission:write"), asyncHandler(async (req, res) =>
+  ok(res, await external.deleteExternalAdmission(req.params.id)),
+));
+router.get("/exams/:id", requirePermission("quiz:read"), asyncHandler(async (req, res) => ok(res, await exams.getExam(req.params.id))));
+router.delete("/exams/:id", requirePermission("quiz:write"), asyncHandler(async (req, res) => ok(res, await exams.deleteExam(req.params.id))));
+router.post("/exams/:id/publish", requirePermission("quiz:write"), asyncHandler(async (req, res) => ok(res, await exams.setExamPublished(req.params.id, true))));
+router.post("/exams/:id/unpublish", requirePermission("quiz:write"), asyncHandler(async (req, res) => ok(res, await exams.setExamPublished(req.params.id, false))));
+router.post(
+  "/exams/:id/questions/from-bank",
+  requirePermission("quiz:write"),
+  validate({ body: z.object({ bankIds: z.array(objectId).min(1) }) }),
+  asyncHandler(async (req, res) => ok(res, await exams.addQuestionsFromBank(req.params.id, req.body.bankIds))),
+);
+
 router.get("/question-bank", requirePermission("quiz:read"), validate({ query: quizzes.questionBankQuery }), asyncHandler(async (req, res) => {
   const data = await quizzes.listQuestionBank(req.query as never);
   return ok(res, data.items, "OK", data.meta);
@@ -557,17 +618,34 @@ router.get("/typing-paragraphs", requirePermission("quiz:read"), asyncHandler(as
   const data = await paged(TypingParagraph, req);
   return ok(res, data.items, "OK", data.meta);
 }));
-router.get("/settings/website", requirePermission("admin:manage"), asyncHandler(async (_req, res) => ok(res, await siteSettings.getWebsiteSettings())));
+router.get(
+  "/settings/website",
+  requireAnyPermission("admin:manage", "cms:write"),
+  asyncHandler(async (_req, res) => ok(res, await siteSettings.getWebsiteSettings())),
+);
 router.post(
   "/settings/website",
   requirePermission("admin:manage"),
   validate({
     body: z.object({
-      name: z.string().min(2),
-      email: z.string().email(),
-      mobile: z.string().min(8),
-      address: z.string().min(5),
+      name: z.string().min(2).optional(),
+      email: z.string().email().optional(),
+      mobile: z.string().min(8).optional(),
+      address: z.string().min(5).optional(),
       logo: z.record(z.unknown()).nullable().optional(),
+      adBox1Enabled: z.boolean().optional(),
+      adBox2Enabled: z.boolean().optional(),
+    }),
+  }),
+  asyncHandler(async (req, res) => ok(res, await siteSettings.saveWebsiteSettings(req.body))),
+);
+router.post(
+  "/settings/ad-boxes",
+  requirePermission("cms:write"),
+  validate({
+    body: z.object({
+      adBox1Enabled: z.boolean().optional(),
+      adBox2Enabled: z.boolean().optional(),
     }),
   }),
   asyncHandler(async (req, res) => ok(res, await siteSettings.saveWebsiteSettings(req.body))),
@@ -820,6 +898,129 @@ router.get("/quiz-attempts", requirePermission("quiz:read"), validate({
     totalPages: Math.ceil(total / limit) || 1,
   });
 }));
+router.get("/exam-attempts", requirePermission("quiz:read"), validate({
+  query: paginationQuery.extend({
+    examId: objectId.optional(),
+    studentId: objectId.optional(),
+    status: z.string().trim().optional(),
+  }),
+}), asyncHandler(async (req, res) => {
+  const q = req.query as unknown as z.infer<typeof paginationQuery> & {
+    examId?: string;
+    studentId?: string;
+    status?: string;
+  };
+  const page = Number(q.page || 1);
+  const limit = Math.min(100, Number(q.limit || 20));
+  const filter: Record<string, unknown> = {};
+  if (q.examId) filter.exam = q.examId;
+  if (q.studentId) filter.student = q.studentId;
+  if (q.status) filter.status = q.status;
+
+  const [items, total] = await Promise.all([
+    ExamAttempt.find(filter)
+      .populate({
+        path: "student",
+        select: "studentCode rollNumber batch",
+        populate: [
+          { path: "user", select: "name email phone" },
+          { path: "batch", select: "label timing" },
+        ],
+      })
+      .populate({
+        path: "exam",
+        select: "title passing minutes negative negativeValue course subject questions",
+        populate: { path: "course", select: "title slug" },
+      })
+      .sort({ submittedAt: -1, createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    ExamAttempt.countDocuments(filter),
+  ]);
+
+  const mapped = items.map((row) => {
+    const exam = row.exam as { questions?: { marks?: number }[] } | null | undefined;
+    const totalMarks = (exam?.questions ?? []).reduce((sum, item) => sum + (item.marks ?? 1), 0);
+    if (exam && typeof exam === "object") {
+      return {
+        ...row,
+        exam: { ...exam, totalMarks, questions: undefined },
+      };
+    }
+    return row;
+  });
+
+  const pairKeys = new Map<string, { studentId: string; courseId: string }>();
+  for (const row of mapped) {
+    const studentId = row.student && typeof row.student === "object" && "_id" in row.student
+      ? String((row.student as { _id: unknown })._id)
+      : "";
+    const course = (row as { exam?: { course?: unknown } }).exam?.course;
+    const courseId =
+      course && typeof course === "object" && "_id" in course
+        ? String((course as { _id: unknown })._id)
+        : typeof course === "string"
+          ? course
+          : "";
+    if (studentId && courseId) pairKeys.set(`${studentId}:${courseId}`, { studentId, courseId });
+  }
+
+  const pairs = [...pairKeys.values()];
+  const enrollments = pairs.length
+    ? await Enrollment.find({
+        $or: pairs.map((p) => ({ student: p.studentId, course: p.courseId })),
+      })
+        .select("_id student course")
+        .lean()
+    : [];
+
+  const enrollmentByPair = new Map(
+    enrollments.map((e) => [`${String(e.student)}:${String(e.course)}`, String(e._id)]),
+  );
+  const enrollmentIds = enrollments.map((e) => String(e._id));
+  const certificates = enrollmentIds.length
+    ? await CourseCertificate.find({ enrollment: { $in: enrollmentIds }, status: "issued" })
+        .select("enrollment certificateNumber issuedAt status")
+        .lean()
+    : [];
+  const certByEnrollment = new Map(
+    certificates.map((c) => [String(c.enrollment), c]),
+  );
+
+  const withEnrollment = mapped.map((row) => {
+    const studentId = row.student && typeof row.student === "object" && "_id" in row.student
+      ? String((row.student as { _id: unknown })._id)
+      : "";
+    const course = (row as { exam?: { course?: unknown } }).exam?.course;
+    const courseId =
+      course && typeof course === "object" && "_id" in course
+        ? String((course as { _id: unknown })._id)
+        : typeof course === "string"
+          ? course
+          : "";
+    const enrollmentId = studentId && courseId ? enrollmentByPair.get(`${studentId}:${courseId}`) : undefined;
+    const certificate = enrollmentId ? certByEnrollment.get(enrollmentId) : undefined;
+    return {
+      ...row,
+      enrollmentId: enrollmentId ?? null,
+      certificate: certificate
+        ? {
+            certificateNumber: certificate.certificateNumber,
+            issuedAt: certificate.issuedAt,
+            status: certificate.status,
+          }
+        : null,
+    };
+  });
+
+  return ok(res, withEnrollment, "OK", {
+    currentPage: page,
+    totalItems: total,
+    limit,
+    totalPages: Math.ceil(total / limit) || 1,
+  });
+}));
 router.get("/typing-attempts", requirePermission("quiz:read"), validate({
   query: paginationQuery.extend({
     language: z.enum(["en", "hi", ""]).optional(),
@@ -879,6 +1080,7 @@ router.patch(
 );
 router.patch("/live/:id", requirePermission("live:write"), asyncHandler(async (req, res) => ok(res, await live.updateLiveClass(req.params.id, req.body))));
 router.patch("/quizzes/:id", requirePermission("quiz:write"), asyncHandler(async (req, res) => ok(res, await quizzes.updateQuiz(req.params.id, req.body))));
+router.patch("/exams/:id", requirePermission("quiz:write"), asyncHandler(async (req, res) => ok(res, await exams.updateExam(req.params.id, req.body))));
 router.patch("/students/:id", requirePermission("student:update"), asyncHandler(async (req, res) => ok(res, await students.adminUpdateStudent(req.params.id, req.body))));
 router.post(
   "/students/:id/reset-password",
@@ -906,6 +1108,9 @@ router.get("/id-cards/:studentId/pdf", requirePermission("student:read"), asyncH
   const student = await Student.findById(req.params.studentId).populate("user").lean();
   if (!student) return ok(res, null, "Missing");
   const user = student.user as { name?: string; phone?: string; email?: string } | null;
+  const site = await siteSettings.getWebsiteSettings();
+  const logo = site.logo as { url?: string } | string | null | undefined;
+  const logoUrl = typeof logo === "string" ? logo : logo?.url;
   const bytes = await buildIdCardPdf({
     name: user?.name ?? "Student",
     studentCode: student.studentCode,
@@ -916,6 +1121,8 @@ router.get("/id-cards/:studentId/pdf", requirePermission("student:read"), asyncH
     email: user?.email,
     address: student.address,
     photoUrl: student.photo?.url,
+    logoUrl,
+    instituteName: site.name,
   });
   await DigitalIdCard.findOneAndUpdate(
     { student: student._id },
@@ -987,3 +1194,4 @@ for (const item of writable) {
 
 void loc;
 export default router;
+

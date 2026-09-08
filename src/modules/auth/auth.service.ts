@@ -1,7 +1,7 @@
 import argon2 from "argon2";
 import { nanoid } from "nanoid";
 import { Role, Student, User } from "../../models/index.ts";
-import { ForbiddenError, UnauthorizedError } from "../../utils/errors.ts";
+import { ForbiddenError, UnauthorizedError, BadRequestError } from "../../utils/errors.ts";
 import { saveStudentPushToken, saveStudentPushTokenIfEmpty, saveUserPushToken } from "../../utils/push-token.ts";
 import { hashToken, newJti, signAccess, signRefresh, verifyRefresh } from "../../utils/tokens.ts";
 import type { RoleKey } from "../../constants/rbac.ts";
@@ -59,7 +59,14 @@ async function issueTokens(user: InstanceType<typeof User>, kind: "student" | "s
   return {
     accessToken,
     refreshToken,
-    user: { id: user._id, name: user.name, kind, studentCode: user.studentCode, roles: keys },
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      kind,
+      studentCode: user.studentCode,
+      roles: keys,
+    },
   };
 }
 
@@ -90,6 +97,69 @@ export async function changePassword(userId: string, current: string, next: stri
   user.passwordChangedAt = new Date();
   user.refreshTokenHash = undefined;
   await user.save();
+}
+
+export async function getMe(userId: string) {
+  const user = await User.findById(userId);
+  if (!user) throw new UnauthorizedError();
+  const roles = await Role.find({ _id: { $in: user.roles } }).lean();
+  return {
+    id: String(user._id),
+    name: user.name,
+    email: user.email ?? "",
+    kind: user.kind,
+    roles: roles.map((r) => r.key),
+  };
+}
+
+export async function updateAccount(
+  userId: string,
+  body: { currentPassword: string; email?: string; newPassword?: string },
+) {
+  const user = await User.findById(userId).select("+passwordHash +refreshTokenHash");
+  if (!user) throw new UnauthorizedError();
+  if (user.kind !== "staff") throw new ForbiddenError("Only staff accounts can use this endpoint");
+
+  const ok = await argon2.verify(user.passwordHash, body.currentPassword);
+  if (!ok) throw new UnauthorizedError("Current password is incorrect");
+
+  const nextEmail = body.email?.trim().toLowerCase();
+  const nextPassword = body.newPassword?.trim();
+  if (!nextEmail && !nextPassword) {
+    throw new BadRequestError("Provide a new email and/or new password");
+  }
+
+  if (nextEmail && nextEmail !== (user.email ?? "").toLowerCase()) {
+    const taken = await User.findOne({
+      _id: { $ne: user._id },
+      email: nextEmail,
+      kind: "staff",
+    }).lean();
+    if (taken) throw new BadRequestError("That email is already in use by another staff account");
+    user.email = nextEmail;
+  }
+
+  let passwordChanged = false;
+  if (nextPassword) {
+    if (nextPassword.length < 8) throw new BadRequestError("New password must be at least 8 characters");
+    user.passwordHash = await argon2.hash(nextPassword);
+    user.passwordChangedAt = new Date();
+    user.refreshTokenHash = undefined;
+    passwordChanged = true;
+  }
+
+  await user.save();
+  const roles = await Role.find({ _id: { $in: user.roles } }).lean();
+  return {
+    passwordChanged,
+    user: {
+      id: String(user._id),
+      name: user.name,
+      email: user.email ?? "",
+      kind: user.kind,
+      roles: roles.map((r) => r.key),
+    },
+  };
 }
 
 export async function hashPassword(plain: string) {
