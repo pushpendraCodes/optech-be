@@ -544,9 +544,9 @@ async function seed() {
     { kind: "ad" as const, title: "English + Hindi Typing", body: "6 weeks · ₹4,000 · morning batch", href: "/courses/english-hindi-typing", cta: "View course", slot: "box2", sortOrder: 3 },
     { kind: "ad" as const, title: "Tally Prime evening", body: "GST labs · 8 weeks · campus + online", href: "/courses/tally-prime", cta: "View course", slot: "box2", sortOrder: 4 },
     { kind: "popup" as const, title: "Admission open — Scholarship exam live", body: "Register for the public scholarship test. Score 75%+ and unlock a 10–20% course coupon you can use at checkout.", href: "/scholarship", cta: "Take scholarship exam", sortOrder: 0 },
-    { kind: "link" as const, title: "SSC / Govt exam portal", body: "Official notifications and applications.", href: "https://ssc.gov.in", sortOrder: 0 },
-    { kind: "link" as const, title: "Maharashtra results", body: "Board and university result lookup.", href: "https://mahresult.nic.in", sortOrder: 1 },
-    { kind: "link" as const, title: "NSDC skill resources", body: "National skill development materials.", href: "https://www.nsdcindia.org", sortOrder: 2 },
+    { kind: "link" as const, title: "SSC / Govt exam portal", body: "Official notifications and applications.", href: "https://ssc.gov.in", cta: "Visit site", slot: "Exam", featured: true, sortOrder: 0 },
+    { kind: "link" as const, title: "Maharashtra results", body: "Board and university result lookup.", href: "https://mahresult.nic.in", cta: "Visit site", slot: "Result", featured: true, sortOrder: 1 },
+    { kind: "link" as const, title: "NSDC skill resources", body: "National skill development materials.", href: "https://www.nsdcindia.org", cta: "Visit site", slot: "Skill", sortOrder: 2 },
   ];
   for (const item of cms) {
     await CmsItem.updateOne({ kind: item.kind, title: item.title }, { ...item, active: true }, { upsert: true });

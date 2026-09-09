@@ -1031,6 +1031,7 @@ export interface CmsItemDoc extends Document {
   /** Multiple popup images/videos; `image` stays as the first for backwards compatibility. */
   media?: CloudinaryAsset[];
   slot?: string;
+  featured?: boolean;
   active: boolean;
   startsAt?: Date;
   endsAt?: Date;
@@ -1046,6 +1047,7 @@ const CmsItemSchema = new Schema<CmsItemDoc>(
     image: AssetSchema,
     media: [AssetSchema],
     slot: String,
+    featured: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
     startsAt: Date,
     endsAt: Date,

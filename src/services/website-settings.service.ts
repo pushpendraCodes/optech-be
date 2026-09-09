@@ -1,5 +1,5 @@
 export const DEFAULT_WEBSITE_SETTINGS = {
-  name: "Optech Computer Institute",
+  name: "Optech Computer Institute of Technology",
   email: "info@optech-deori.edu.in",
   mobile: "+91 0712 253 4587",
   address: "Ward No. 04, Ganesh Chowk, behind Shitala Mata Mandir, Deori, Maharashtra 441901",

@@ -85,7 +85,9 @@ export async function publicCms(kind: "marquee" | "ad" | "popup" | "link") {
         return { ...row, media, image: media[0] ?? row.image };
       });
     }
-    return CmsItem.find({ kind, ...activeNow() }).sort({ sortOrder: 1 }).lean();
+    return CmsItem.find({ kind, ...activeNow() })
+      .sort(kind === "link" ? { featured: -1, sortOrder: 1 } : { sortOrder: 1 })
+      .lean();
   });
 }
 
