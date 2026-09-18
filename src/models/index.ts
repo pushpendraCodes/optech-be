@@ -422,6 +422,10 @@ export interface AttendanceDoc extends Document {
   session?: string;
   status: "present" | "absent" | "late";
   markedBy?: Types.ObjectId;
+  loginAt?: Date;
+  logoutAt?: Date;
+  loginPhoto?: CloudinaryAsset;
+  logoutPhoto?: CloudinaryAsset;
 }
 const AttendanceSchema = new Schema<AttendanceDoc>(
   {
@@ -432,11 +436,16 @@ const AttendanceSchema = new Schema<AttendanceDoc>(
     session: { type: String, default: "default" },
     status: { type: String, enum: ["present", "absent", "late"], required: true },
     markedBy: { type: Schema.Types.ObjectId, ref: "User" },
+    loginAt: Date,
+    logoutAt: Date,
+    loginPhoto: AssetSchema,
+    logoutPhoto: AssetSchema,
   },
   { timestamps: true },
 );
 AttendanceSchema.index({ student: 1, date: 1, session: 1 }, { unique: true });
 AttendanceSchema.index({ batch: 1, date: 1 });
+AttendanceSchema.index({ date: 1 });
 
 export interface QuizQuestion {
   type: "mcq" | "tf" | "blank";

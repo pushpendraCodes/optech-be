@@ -306,6 +306,97 @@ export async function computeStudentFees(studentId: string) {
   };
 }
 
+export type StudentFeeSummary = {
+  totalDue: number;
+  totalOverdue: number;
+  nextDueDate?: Date;
+  nextDueAmount?: number;
+  nextDueKind?: "installment" | "full";
+};
+
+/** Read-only fee totals for admin lists — no per-student writes. */
+export async function computeStudentFeeSummaries(studentIds: string[]) {
+  const map = new Map<string, StudentFeeSummary>();
+  for (const id of studentIds) map.set(id, { totalDue: 0, totalOverdue: 0 });
+  if (!studentIds.length) return map;
+
+  const [dueInstallments, paidPayments, enrollments] = await Promise.all([
+    Installment.find({ student: { $in: studentIds }, status: { $in: ["due", "overdue"] } })
+      .select("student amount status dueDate")
+      .lean(),
+    Payment.find({ student: { $in: studentIds }, status: "paid" })
+      .select("student amount enrollment course notes listFee discount couponCode")
+      .lean(),
+    Enrollment.find({ student: { $in: studentIds }, status: "active" })
+      .select("student course feePlan agreedFee listFee discount couponCode")
+      .populate("course", "fee")
+      .lean(),
+  ]);
+
+  const installmentsByStudent = new Map<string, typeof dueInstallments>();
+  for (const row of dueInstallments) {
+    const key = String(row.student);
+    const list = installmentsByStudent.get(key) ?? [];
+    list.push(row);
+    installmentsByStudent.set(key, list);
+  }
+
+  const paymentsByStudent = new Map<string, typeof paidPayments>();
+  for (const row of paidPayments) {
+    const key = String(row.student);
+    const list = paymentsByStudent.get(key) ?? [];
+    list.push(row);
+    paymentsByStudent.set(key, list);
+  }
+
+  const enrollmentsByStudent = new Map<string, typeof enrollments>();
+  for (const row of enrollments) {
+    const key = String(row.student);
+    const list = enrollmentsByStudent.get(key) ?? [];
+    list.push(row);
+    enrollmentsByStudent.set(key, list);
+  }
+
+  for (const id of studentIds) {
+    const inst = installmentsByStudent.get(id) ?? [];
+    const installmentDue = inst.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    const totalOverdue = inst
+      .filter((row) => row.status === "overdue")
+      .reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    const nextInstallment = [...inst].sort(
+      (a, b) => new Date(String(a.dueDate)).getTime() - new Date(String(b.dueDate)).getTime(),
+    )[0];
+
+    const ens = enrollmentsByStudent.get(id) ?? [];
+    const paid = paymentsByStudent.get(id) ?? [];
+    let fullFeeDue = 0;
+    let firstFullDue: number | undefined;
+    for (const en of ens) {
+      if (en.feePlan !== "full") continue;
+      const course = en.course as { _id?: unknown; fee?: number };
+      const courseFee = Number(course?.fee ?? 0);
+      const enPayments = paymentsForEnrollment(String(en._id), refId(course?._id ?? en.course), paid, ens.length === 1);
+      const feeMeta = enrollmentFeeMeta(en, courseFee, enPayments);
+      const paidForEn = enPayments.reduce((sum, p) => sum + Number(p.amount ?? 0), 0);
+      const due = Math.max(0, feeMeta.agreedFee - paidForEn);
+      if (due > 0) {
+        fullFeeDue += due;
+        if (firstFullDue == null) firstFullDue = due;
+      }
+    }
+
+    map.set(id, {
+      totalDue: installmentDue + fullFeeDue,
+      totalOverdue,
+      nextDueDate: nextInstallment?.dueDate,
+      nextDueAmount: nextInstallment?.amount ?? firstFullDue,
+      nextDueKind: nextInstallment ? "installment" : fullFeeDue > 0 ? "full" : undefined,
+    });
+  }
+
+  return map;
+}
+
 export async function studentIdsWithOutstandingFees() {
   const ids = new Set<string>();
 

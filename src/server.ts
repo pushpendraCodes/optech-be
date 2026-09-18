@@ -5,6 +5,7 @@ import { env } from "./config/env.ts";
 import { firebaseApp } from "./config/firebase.ts";
 import { logger } from "./config/logger.ts";
 import { startBackupCron } from "./jobs/backup-cron.ts";
+import { startAttendancePhotoCron } from "./jobs/attendance-photo-cron.ts";
 import { startWorkers } from "./jobs/worker.ts";
 
 function muteQueueNoise() {
@@ -30,6 +31,11 @@ async function main() {
     startBackupCron();
   } catch (err) {
     logger.warn({ err }, "Backup cron skipped");
+  }
+  try {
+    startAttendancePhotoCron();
+  } catch (err) {
+    logger.warn({ err }, "Attendance photo cron skipped");
   }
   const app = createApp();
   app.listen(env.PORT, () => {

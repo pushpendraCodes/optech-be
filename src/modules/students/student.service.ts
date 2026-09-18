@@ -21,7 +21,7 @@ import { ForbiddenError, NotFoundError } from "../../utils/errors.ts";
 import { hashPassword } from "../auth/auth.service.ts";
 import { gradeQuiz, gradeTyping } from "../../services/grading.service.ts";
 import { buildIdCardPdf } from "../../services/pdf.service.ts";
-import { computeStudentFees, studentIdsWithOutstandingFees } from "../../services/installment.service.ts";
+import { computeStudentFees, computeStudentFeeSummaries, studentIdsWithOutstandingFees } from "../../services/installment.service.ts";
 import { certificatesForEnrollments } from "../../services/certificate.service.ts";
 import { getWebsiteSettings } from "../../services/website-settings.service.ts";
 import { paginationMeta } from "../../utils/pagination.ts";
@@ -511,6 +511,7 @@ type AdminStudentsQuery = PaginationQuery & {
   course?: string;
   status?: "" | "active" | "blocked";
   feesDue?: string;
+  lite?: string;
 };
 
 export async function adminListStudents(q: AdminStudentsQuery) {
@@ -573,22 +574,15 @@ export async function adminListStudents(q: AdminStudentsQuery) {
     Student.countDocuments(filter),
   ]);
 
-  const enriched = await Promise.all(
-    items.map(async (student) => {
-      const feeSnapshot = await computeStudentFees(String(student._id));
-      const fees = feeSnapshot.fees;
-      return {
-        ...student,
-        feesSummary: {
-          totalDue: fees.totalDue,
-          totalOverdue: fees.totalOverdue,
-          nextDueDate: fees.nextDueDate,
-          nextDueAmount: fees.nextDueAmount,
-          nextDueKind: fees.nextDueKind,
-        },
-      };
-    }),
-  );
+  const lite = q.lite === "1" || q.lite === "true";
+  const summaries = lite ? new Map() : await computeStudentFeeSummaries(items.map((student) => String(student._id)));
+  const enriched = items.map((student) => {
+    const fees = summaries.get(String(student._id));
+    return {
+      ...student,
+      feesSummary: fees ?? { totalDue: 0, totalOverdue: 0 },
+    };
+  });
 
   return {
     items: enriched,

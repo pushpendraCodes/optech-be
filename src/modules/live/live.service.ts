@@ -5,6 +5,7 @@ import { extractYoutubeId } from "../../services/youtube.service.ts";
 import { enqueueBroadcast, notifyLiveNow } from "../../services/notification.service.ts";
 import { cache } from "../../services/cache.service.ts";
 import { CACHE_KEYS } from "../../constants/cache.ts";
+import * as attendance from "../attendance/attendance.service.ts";
 
 const createBodySchema = z.object({
   title: z.string().min(2),
@@ -270,6 +271,10 @@ export async function publicClassroomLive() {
         const palette = CLASSROOM_COLORS[index % CLASSROOM_COLORS.length];
         // Always load roster (may be empty) — empty batches still appear
         const students = await rosterForBatch(String(batch._id));
+        const marks = await attendance.todayMarksForBatch(
+          String(batch._id),
+          students.map((s) => s.id),
+        );
 
         return {
           id: String(batch._id),
@@ -286,11 +291,16 @@ export async function publicClassroomLive() {
           accentColor: palette.accentColor,
           isLive,
           timing: String(batch.timing ?? ""),
-          students: students.map((s) => ({
-            ...s,
-            course: courseTitle,
-            batch: batchLabel,
-          })),
+          students: students.map((s) => {
+            const mark = marks.get(s.id);
+            return {
+              ...s,
+              course: courseTitle,
+              batch: batchLabel,
+              loggedIn: Boolean(mark?.loggedIn),
+              loggedOut: Boolean(mark?.loggedOut),
+            };
+          }),
         };
       }),
     );

@@ -130,6 +130,7 @@ router.get("/students", requirePermission("student:read"), validate({
     course: objectId.optional(),
     status: z.enum(["active", "blocked", ""]).optional(),
     feesDue: z.enum(["", "0", "1", "true", "false"]).optional(),
+    lite: z.enum(["", "0", "1", "true", "false"]).optional(),
   }),
 }), asyncHandler(async (req, res) => {
   const q = req.query as unknown as z.infer<typeof paginationQuery> & {
@@ -137,6 +138,7 @@ router.get("/students", requirePermission("student:read"), validate({
     course?: string;
     status?: "" | "active" | "blocked";
     feesDue?: string;
+    lite?: string;
   };
   const { items, meta } = await students.adminListStudents(q);
   return ok(res, items, "OK", meta);

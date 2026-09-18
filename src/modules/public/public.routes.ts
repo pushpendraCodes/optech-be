@@ -1,4 +1,5 @@
 import { Router } from "express";
+import multer from "multer";
 import { z } from "zod";
 import { validate } from "../../middleware/validate.ts";
 import { asyncHandler } from "../../utils/async-handler.ts";
@@ -10,11 +11,14 @@ import * as scholarship from "../scholarships/scholarship.service.ts";
 import * as enquiries from "../enquiries/enquiry.service.ts";
 import * as videoSvc from "../videos/video.service.ts";
 import * as siteSettings from "../../services/website-settings.service.ts";
+import * as attendance from "../attendance/attendance.service.ts";
 import { objectId } from "../../utils/pagination.ts";
 import { env } from "../../config/env.ts";
 import { indianMobileSchema, optionalIndianMobileSchema } from "../../utils/phone.ts";
+import { BadRequestError } from "../../utils/errors.ts";
 
 const router = Router();
+const attendancePhoto = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6 * 1024 * 1024 } });
 
 router.get(
   "/courses",
@@ -46,6 +50,30 @@ router.get("/ads", asyncHandler(async (_req, res) => ok(res, await cms.publicCms
 router.get("/popups", asyncHandler(async (_req, res) => ok(res, await cms.publicCms("popup"))));
 router.get("/links", asyncHandler(async (_req, res) => ok(res, await cms.publicCms("link"))));
 router.get("/live", asyncHandler(async (_req, res) => ok(res, await cms.publicLive())));
+
+router.post(
+  "/live/attendance",
+  attendancePhoto.single("photo"),
+  asyncHandler(async (req, res) => {
+    if (!req.file) throw new BadRequestError("Attendance photo is required");
+    const studentId = String(req.body.studentId ?? "");
+    const batchId = String(req.body.batchId ?? "");
+    const studentCode = String(req.body.studentCode ?? "");
+    const action = String(req.body.action ?? "");
+    if (!/^[a-f\d]{24}$/i.test(studentId) || !/^[a-f\d]{24}$/i.test(batchId)) {
+      throw new BadRequestError("Invalid student or batch");
+    }
+    if (action !== "login" && action !== "logout") throw new BadRequestError("Action must be login or logout");
+    const data = await attendance.markLiveSelfie({
+      studentId,
+      batchId,
+      studentCode,
+      action,
+      file: req.file,
+    });
+    return ok(res, data, action === "login" ? "Login attendance saved" : "Logout attendance saved");
+  }),
+);
 
 router.post(
   "/calculator",
