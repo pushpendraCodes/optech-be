@@ -26,22 +26,41 @@ function wrapText(font: PDFFont, text: string, size: number, maxWidth: number) {
   return lines.length ? lines : [""];
 }
 
+function imageCandidates(url: string) {
+  const list = [url];
+  const marker = "/image/upload/";
+  const index = url.indexOf(marker);
+  if (index >= 0) {
+    list.unshift(`${url.slice(0, index + marker.length)}f_png,q_90,w_600/${url.slice(index + marker.length)}`);
+  }
+  return [...new Set(list)];
+}
+
 async function embedPhoto(doc: PDFDocument, url?: string) {
   if (!url) return null;
-  try {
-    const { data, headers } = await axios.get<ArrayBuffer>(url, {
-      responseType: "arraybuffer",
-      timeout: 10000,
-    });
-    const bytes = new Uint8Array(data);
-    const type = String(headers["content-type"] ?? "").toLowerCase();
-    if (type.includes("png") || url.toLowerCase().includes(".png")) {
-      return doc.embedPng(bytes);
+  for (const candidate of imageCandidates(url)) {
+    try {
+      const { data, headers } = await axios.get<ArrayBuffer>(candidate, {
+        responseType: "arraybuffer",
+        timeout: 10000,
+      });
+      const bytes = new Uint8Array(data);
+      const type = String(headers["content-type"] ?? "").toLowerCase();
+      const looksPng = type.includes("png") || candidate.toLowerCase().includes(".png") || candidate.includes("f_png");
+      if (looksPng) return await doc.embedPng(bytes);
+      if (type.includes("jpeg") || type.includes("jpg") || /\.jpe?g/i.test(candidate)) {
+        return await doc.embedJpg(bytes);
+      }
+      try {
+        return await doc.embedPng(bytes);
+      } catch {
+        return await doc.embedJpg(bytes);
+      }
+    } catch {
+      continue;
     }
-    return doc.embedJpg(bytes);
-  } catch {
-    return null;
   }
+  return null;
 }
 
 function drawLogo(
@@ -71,8 +90,54 @@ function drawLogo(
   page.drawCircle({ x: cx, y: cy - 1, size: 2, color: GOLD });
 }
 
+function pdfText(value: string) {
+  return value
+    .replace(/\u20B9/g, "Rs. ")
+    .replace(/[\u2013\u2014]/g, "-")
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u00A0/g, " ")
+    .replace(/[^\x20-\x7E]/g, "")
+    .trim();
+}
+
 function inr(n: number) {
   return `Rs. ${Number(n || 0).toLocaleString("en-IN")}`;
+}
+
+const WORDS_ONES = [
+  "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+  "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen",
+];
+const WORDS_TENS = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+
+function wordsUnder100(n: number) {
+  if (n < 20) return WORDS_ONES[n];
+  const tens = Math.floor(n / 10);
+  const ones = n % 10;
+  return ones ? `${WORDS_TENS[tens]} ${WORDS_ONES[ones]}` : WORDS_TENS[tens];
+}
+
+function wordsUnder1000(n: number) {
+  if (n < 100) return wordsUnder100(n);
+  const hundreds = Math.floor(n / 100);
+  const rest = n % 100;
+  return rest ? `${WORDS_ONES[hundreds]} Hundred ${wordsUnder100(rest)}` : `${WORDS_ONES[hundreds]} Hundred`;
+}
+
+function inrWords(amount: number) {
+  const n = Math.round(Math.abs(amount));
+  if (!n) return "Rupees Zero Only";
+  const crore = Math.floor(n / 10000000);
+  const lakh = Math.floor((n % 10000000) / 100000);
+  const thousand = Math.floor((n % 100000) / 1000);
+  const rest = n % 1000;
+  const parts: string[] = [];
+  if (crore) parts.push(`${wordsUnder1000(crore)} Crore`);
+  if (lakh) parts.push(`${wordsUnder100(lakh)} Lakh`);
+  if (thousand) parts.push(`${wordsUnder100(thousand)} Thousand`);
+  if (rest) parts.push(wordsUnder1000(rest));
+  return `Rupees ${parts.join(" ")} Only`;
 }
 
 export async function buildReceiptPdf(opts: {
@@ -99,6 +164,7 @@ export async function buildInvoicePdf(opts: {
   instituteEmail?: string;
   institutePhone?: string;
   instituteAddress?: string;
+  logoUrl?: string;
   invoiceNumber: string;
   date: string;
   payerName: string;
@@ -107,6 +173,7 @@ export async function buildInvoicePdf(opts: {
   course: string;
   fee: number;
   discount: number;
+  coupon?: string;
   total: number;
   paymentId?: string;
   orderId?: string;
@@ -116,115 +183,227 @@ export async function buildInvoicePdf(opts: {
   const page = doc.addPage([595, 842]);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedPhoto(doc, opts.logoUrl);
   const W = 595;
   const H = 842;
-  const ink = rgb(0.12, 0.12, 0.14);
-  const muted = rgb(0.4, 0.4, 0.44);
-  const line = rgb(0.9, 0.9, 0.92);
+  const ink = rgb(0.11, 0.12, 0.15);
+  const muted = rgb(0.4, 0.42, 0.46);
+  const line = rgb(0.86, 0.87, 0.89);
   const gold = rgb(0.83, 0.64, 0.18);
-  const navy = rgb(0.1, 0.12, 0.18);
-  const cream = rgb(0.99, 0.97, 0.93);
+  const navy = rgb(0.08, 0.1, 0.16);
+  const cream = rgb(0.98, 0.96, 0.92);
+  const soft = rgb(0.96, 0.96, 0.97);
+  const green = rgb(0.1, 0.48, 0.32);
+  const paper = rgb(0.94, 0.94, 0.95);
 
-  page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: WHITE });
-  page.drawRectangle({ x: 0, y: H - 10, width: W, height: 10, color: gold });
-  page.drawRectangle({ x: 0, y: H - 118, width: W, height: 108, color: navy });
+  const institute = pdfText(opts.instituteName || "Optech Computer Institute");
+  const invoiceNo = pdfText(opts.invoiceNumber);
+  const date = pdfText(opts.date);
+  const payer = pdfText(opts.payerName || "Student");
+  const course = pdfText(opts.course || "Course fee");
+  const mode = pdfText((opts.mode || "razorpay").replace(/_/g, " "));
+  const modeLabel = mode.charAt(0).toUpperCase() + mode.slice(1);
 
-  drawLogo(page, 52, H - 64, 20);
-  page.drawText((opts.instituteName || "Optech Computer Institute").toUpperCase(), {
-    x: 82,
-    y: H - 52,
-    size: 13,
+  function rightText(text: string, right: number, y: number, size: number, face: PDFFont, color: ReturnType<typeof rgb>) {
+    page.drawText(text, { x: right - face.widthOfTextAtSize(text, size), y, size, font: face, color });
+  }
+
+  page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: paper });
+  const cardX = 22;
+  const cardY = 22;
+  const cardW = W - 44;
+  const cardH = H - 44;
+  page.drawRectangle({ x: cardX, y: cardY, width: cardW, height: cardH, color: WHITE });
+  page.drawRectangle({ x: cardX, y: cardY, width: cardW, height: cardH, borderColor: line, borderWidth: 0.8 });
+  page.drawRectangle({ x: cardX, y: cardY + cardH - 7, width: cardW, height: 7, color: gold });
+
+  const headerH = 118;
+  const headerBottom = cardY + cardH - 7 - headerH;
+  page.drawRectangle({ x: cardX, y: headerBottom, width: cardW, height: headerH, color: navy });
+
+  const logoSize = 62;
+  const logoX = cardX + 18;
+  const logoY = headerBottom + (headerH - logoSize) / 2;
+  page.drawRectangle({ x: logoX, y: logoY, width: logoSize, height: logoSize, color: WHITE });
+  if (logo) {
+    const pad = 5;
+    const scale = Math.min((logoSize - pad * 2) / logo.width, (logoSize - pad * 2) / logo.height);
+    const drawW = logo.width * scale;
+    const drawH = logo.height * scale;
+    page.drawImage(logo, {
+      x: logoX + (logoSize - drawW) / 2,
+      y: logoY + (logoSize - drawH) / 2,
+      width: drawW,
+      height: drawH,
+    });
+  } else {
+    drawLogo(page, logoX + logoSize / 2, logoY + logoSize / 2, 18);
+  }
+
+  const textX = logoX + logoSize + 12;
+  const nameLines = wrapText(bold, institute.toUpperCase(), 12, 250).slice(0, 2);
+  let nameY = headerBottom + headerH - 32;
+  for (const row of nameLines) {
+    page.drawText(row, { x: textX, y: nameY, size: 12, font: bold, color: WHITE });
+    nameY -= 15;
+  }
+  const addressLines = wrapText(font, pdfText(opts.instituteAddress || ""), 8, 250).slice(0, 2);
+  for (const row of addressLines) {
+    if (!row) continue;
+    page.drawText(row, { x: textX, y: nameY, size: 8, font, color: rgb(0.78, 0.79, 0.82) });
+    nameY -= 11;
+  }
+  const contact = [opts.institutePhone ? pdfText(opts.institutePhone) : "", opts.instituteEmail ? pdfText(opts.instituteEmail) : ""]
+    .filter(Boolean)
+    .join("  |  ");
+  if (contact) {
+    page.drawText(contact, { x: textX, y: nameY - 2, size: 8, font, color: gold });
+  }
+
+  const right = cardX + cardW - 18;
+  page.drawText("INVOICE", {
+    x: right - bold.widthOfTextAtSize("INVOICE", 20),
+    y: headerBottom + 86,
+    size: 20,
     font: bold,
-    color: WHITE,
-  });
-  page.drawText("TAX INVOICE  /  FEE RECEIPT", {
-    x: 82,
-    y: H - 70,
-    size: 8,
-    font,
     color: gold,
   });
-  page.drawText("PAID", { x: W - 92, y: H - 48, size: 16, font: bold, color: gold });
-  page.drawText(opts.invoiceNumber, { x: W - 150, y: H - 68, size: 9, font, color: WHITE });
-  page.drawText(opts.date, { x: W - 150, y: H - 82, size: 9, font, color: rgb(0.75, 0.75, 0.78) });
+  rightText("FEE RECEIPT", right, headerBottom + 72, 8, font, rgb(0.78, 0.79, 0.82));
 
-  let y = H - 150;
-  page.drawText("FROM", { x: 40, y, size: 8, font: bold, color: gold });
-  page.drawText("BILL TO", { x: 320, y, size: 8, font: bold, color: gold });
-  y -= 18;
-  page.drawText(opts.instituteName || "Optech Computer Institute", { x: 40, y, size: 11, font: bold, color: ink });
-  page.drawText(opts.payerName, { x: 320, y, size: 11, font: bold, color: ink });
+  const paid = "PAID";
+  const paidW = bold.widthOfTextAtSize(paid, 8) + 16;
+  const paidX = right - paidW;
+  const paidY = headerBottom + 50;
+  page.drawRectangle({ x: paidX, y: paidY, width: paidW, height: 16, color: green });
+  page.drawText(paid, { x: paidX + 8, y: paidY + 4, size: 8, font: bold, color: WHITE });
+  rightText(invoiceNo, right, headerBottom + 32, 9, bold, WHITE);
+  rightText(date, right, headerBottom + 18, 8, font, rgb(0.75, 0.76, 0.8));
+
+  const contentX = cardX + 18;
+  const contentW = cardW - 36;
+  let y = headerBottom - 16;
+
+  const metaH = 44;
+  const metaGap = 8;
+  const metaW = (contentW - metaGap * 2) / 3;
+  const metas = [
+    { label: "INVOICE NO.", value: invoiceNo },
+    { label: "INVOICE DATE", value: date },
+    { label: "STATUS", value: "Paid in full" },
+  ];
+  metas.forEach((item, i) => {
+    const x = contentX + i * (metaW + metaGap);
+    page.drawRectangle({ x, y: y - metaH, width: metaW, height: metaH, color: soft, borderColor: line, borderWidth: 0.6 });
+    page.drawText(item.label, { x: x + 10, y: y - 16, size: 7, font: bold, color: gold });
+    page.drawText(item.value, { x: x + 10, y: y - 32, size: 10, font: bold, color: ink });
+  });
+  y -= metaH + 16;
+
+  const partyH = 86;
+  const partyW = (contentW - 10) / 2;
+  page.drawRectangle({ x: contentX, y: y - partyH, width: partyW, height: partyH, borderColor: line, borderWidth: 0.7 });
+  page.drawRectangle({ x: contentX, y: y - 18, width: partyW, height: 18, color: cream });
+  page.drawText("BILLED TO", { x: contentX + 12, y: y - 13, size: 8, font: bold, color: gold });
+  page.drawText(payer, { x: contentX + 12, y: y - 38, size: 12, font: bold, color: ink });
+  if (opts.payerPhone) page.drawText(pdfText(opts.payerPhone), { x: contentX + 12, y: y - 54, size: 9, font, color: muted });
+  if (opts.payerEmail) page.drawText(pdfText(opts.payerEmail), { x: contentX + 12, y: y - 68, size: 9, font, color: muted });
+
+  const payX = contentX + partyW + 10;
+  page.drawRectangle({ x: payX, y: y - partyH, width: partyW, height: partyH, color: navy });
+  page.drawText("AMOUNT PAID", { x: payX + 12, y: y - 18, size: 8, font: bold, color: gold });
+  const totalLabel = inr(opts.total);
+  page.drawText(totalLabel, { x: payX + 12, y: y - 46, size: 18, font: bold, color: WHITE });
+  page.drawText(`via ${modeLabel}`, { x: payX + 12, y: y - 66, size: 9, font, color: rgb(0.78, 0.79, 0.82) });
+  y -= partyH + 18;
+
+  const cols = { no: contentX + 10, desc: contentX + 40, qty: contentX + contentW - 230, rate: contentX + contentW - 118, amt: contentX + contentW - 12 };
+  page.drawRectangle({ x: contentX, y: y - 22, width: contentW, height: 22, color: navy });
+  page.drawText("#", { x: cols.no, y: y - 15, size: 8, font: bold, color: WHITE });
+  page.drawText("DESCRIPTION", { x: cols.desc, y: y - 15, size: 8, font: bold, color: WHITE });
+  page.drawText("QTY", { x: cols.qty, y: y - 15, size: 8, font: bold, color: WHITE });
+  rightText("RATE", cols.rate, y - 15, 8, bold, WHITE);
+  rightText("AMOUNT", cols.amt, y - 15, 8, bold, WHITE);
+  y -= 22;
+
+  const courseLines = wrapText(bold, course, 10, cols.qty - cols.desc - 12).slice(0, 2);
+  const rowH = courseLines.length > 1 ? 40 : 34;
+  page.drawRectangle({ x: contentX, y: y - rowH, width: contentW, height: rowH, color: cream });
+  page.drawText("01", { x: cols.no, y: y - 16, size: 9, font, color: muted });
+  courseLines.forEach((row, i) => {
+    page.drawText(row, { x: cols.desc, y: y - 16 - i * 12, size: i === 0 ? 10 : 8, font: i === 0 ? bold : font, color: i === 0 ? ink : muted });
+  });
+  if (courseLines.length === 1) {
+    page.drawText("Course enrollment fee", { x: cols.desc, y: y - 28, size: 8, font, color: muted });
+  }
+  page.drawText("1", { x: cols.qty, y: y - 16, size: 9, font, color: ink });
+  rightText(inr(opts.fee), cols.rate, y - 16, 9, font, ink);
+  rightText(inr(opts.fee), cols.amt, y - 16, 9, bold, ink);
+  y -= rowH;
+
+  const totalsW = 220;
+  const totalsX = contentX + contentW - totalsW;
   y -= 14;
-  const fromLines = [
-    opts.instituteAddress,
-    opts.institutePhone ? `Tel ${opts.institutePhone}` : "",
-    opts.instituteEmail,
-  ].filter(Boolean) as string[];
-  const toLines = [opts.payerPhone, opts.payerEmail].filter(Boolean) as string[];
-  const maxLines = Math.max(fromLines.length, toLines.length, 1);
-  for (let i = 0; i < maxLines; i++) {
-    if (fromLines[i]) {
-      wrapText(font, fromLines[i], 9, 250).slice(0, 2).forEach((line, li) => {
-        page.drawText(line, { x: 40, y: y - li * 12, size: 9, font, color: muted });
-      });
-    }
-    if (toLines[i]) page.drawText(toLines[i], { x: 320, y, size: 9, font, color: muted });
-    y -= 14;
-  }
-
-  y -= 18;
-  page.drawRectangle({ x: 40, y: y - 8, width: W - 80, height: 26, color: navy });
-  page.drawText("DESCRIPTION", { x: 52, y: y, size: 8, font: bold, color: WHITE });
-  page.drawText("AMOUNT", { x: W - 120, y, size: 8, font: bold, color: WHITE });
-  y -= 28;
-  page.drawRectangle({ x: 40, y: y - 10, width: W - 80, height: 32, color: cream });
-  const courseLines = wrapText(font, opts.course || "Course fee", 10, 360);
-  page.drawText(courseLines[0], { x: 52, y, size: 10, font: bold, color: ink });
-  if (courseLines[1]) page.drawText(courseLines[1], { x: 52, y: y - 12, size: 8, font, color: muted });
-  const feeLabel = inr(opts.fee);
-  page.drawText(feeLabel, { x: W - 52 - bold.widthOfTextAtSize(feeLabel, 10), y, size: 10, font: bold, color: ink });
-
-  y -= 36;
+  const rows: { label: string; value: string }[] = [{ label: "Subtotal", value: inr(opts.fee) }];
   if (opts.discount > 0) {
-    page.drawText("Discount", { x: 52, y, size: 10, font, color: muted });
-    const d = `- ${inr(opts.discount)}`;
-    page.drawText(d, { x: W - 52 - font.widthOfTextAtSize(d, 10), y, size: 10, font, color: muted });
-    y -= 20;
+    const coupon = opts.coupon ? ` (${pdfText(opts.coupon)})` : "";
+    rows.push({ label: `Discount${coupon}`, value: `- ${inr(opts.discount)}` });
   }
-  page.drawLine({ start: { x: 40, y: y + 8 }, end: { x: W - 40, y: y + 8 }, thickness: 1, color: line });
-  page.drawText("Amount paid", { x: 52, y: y - 8, size: 12, font: bold, color: ink });
-  const total = inr(opts.total);
-  page.drawText(total, { x: W - 52 - bold.widthOfTextAtSize(total, 14), y: y - 8, size: 14, font: bold, color: gold });
+  rows.forEach((row) => {
+    page.drawText(row.label, { x: totalsX, y, size: 9, font, color: muted });
+    rightText(row.value, cols.amt, y, 9, font, ink);
+    y -= 16;
+  });
+  page.drawRectangle({ x: totalsX - 8, y: y - 8, width: totalsW + 8, height: 28, color: navy });
+  page.drawText("Total paid", { x: totalsX, y: y, size: 10, font: bold, color: WHITE });
+  rightText(inr(opts.total), cols.amt, y, 12, bold, gold);
+  y -= 36;
 
-  y -= 48;
-  page.drawRectangle({ x: 40, y: y - 54, width: W - 80, height: 70, borderColor: line, borderWidth: 1 });
-  page.drawText("PAYMENT DETAILS", { x: 52, y: y + 2, size: 8, font: bold, color: gold });
-  page.drawText(`Mode: ${(opts.mode || "Razorpay").toUpperCase()}`, { x: 52, y: y - 16, size: 9, font, color: ink });
-  if (opts.paymentId) page.drawText(`Payment ID: ${opts.paymentId}`, { x: 52, y: y - 30, size: 8, font, color: muted });
-  if (opts.orderId) page.drawText(`Order ID: ${opts.orderId}`, { x: 52, y: y - 42, size: 8, font, color: muted });
+  const words = wrapText(font, inrWords(opts.total), 9, contentW - 24).slice(0, 2);
+  const wordsH = 18 + words.length * 12;
+  page.drawRectangle({ x: contentX, y: y - wordsH, width: contentW, height: wordsH, color: cream });
+  page.drawText("AMOUNT IN WORDS", { x: contentX + 12, y: y - 14, size: 7, font: bold, color: gold });
+  words.forEach((row, i) => {
+    page.drawText(row, { x: contentX + 12, y: y - 28 - i * 12, size: 9, font: bold, color: ink });
+  });
+  y -= wordsH + 16;
 
-  page.drawText("Admission is confirmed by campus staff after this payment.", {
-    x: 40,
-    y: 78,
-    size: 8,
-    font,
-    color: muted,
+  page.drawText("PAYMENT DETAILS", { x: contentX, y, size: 8, font: bold, color: gold });
+  y -= 8;
+  const details = [
+    ["Mode", modeLabel],
+    ["Payment ID", pdfText(opts.paymentId || "-")],
+    ["Order ID", pdfText(opts.orderId || "-")],
+  ];
+  const detailW = contentW / 3;
+  page.drawRectangle({ x: contentX, y: y - 42, width: contentW, height: 42, borderColor: line, borderWidth: 0.7 });
+  details.forEach(([label, value], i) => {
+    const x = contentX + i * detailW + 10;
+    page.drawText(label.toUpperCase(), { x, y: y - 16, size: 7, font: bold, color: muted });
+    const valueLines = wrapText(font, value, 8, detailW - 18).slice(0, 1);
+    page.drawText(valueLines[0] || "-", { x, y: y - 30, size: 8, font, color: ink });
   });
-  page.drawText("This is a computer-generated invoice and does not require a signature.", {
-    x: 40,
-    y: 64,
-    size: 8,
-    font,
-    color: muted,
+  y -= 58;
+
+  page.drawText("Notes", { x: contentX, y, size: 8, font: bold, color: gold });
+  const notes = [
+    "This receipt confirms the online course fee payment.",
+    "Admission is confirmed by campus staff after this payment.",
+    "This is a computer-generated invoice and does not require a signature.",
+  ];
+  notes.forEach((note, i) => {
+    page.drawText(`${i + 1}.  ${note}`, { x: contentX, y: y - 16 - i * 13, size: 8, font, color: muted });
   });
-  page.drawRectangle({ x: 0, y: 0, width: W, height: 28, color: navy });
-  page.drawText("Thank you for choosing Optech Computer Institute", {
-    x: 40,
-    y: 11,
-    size: 9,
-    font,
-    color: WHITE,
-  });
+
+  const signX = contentX + contentW - 170;
+  page.drawLine({ start: { x: signX, y: 92 }, end: { x: contentX + contentW, y: 92 }, thickness: 0.7, color: line });
+  const signLabel = `For ${institute}`;
+  const signLines = wrapText(font, signLabel, 8, 170).slice(0, 1);
+  page.drawText(signLines[0], { x: signX, y: 78, size: 8, font, color: muted });
+  page.drawText("Authorised signatory", { x: signX, y: 66, size: 8, font: bold, color: ink });
+
+  page.drawRectangle({ x: cardX, y: cardY, width: cardW, height: 28, color: navy });
+  page.drawText("Thank you for choosing " + institute, { x: contentX, y: cardY + 10, size: 8, font, color: WHITE });
+  rightText("Page 1 of 1", contentX + contentW, cardY + 10, 8, font, rgb(0.75, 0.76, 0.8));
 
   return doc.save();
 }

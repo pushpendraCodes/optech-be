@@ -399,11 +399,14 @@ export async function buildPaymentInvoicePdf(paymentId: string, orderId: string)
   if (!payment) throw new NotFoundError("Invoice not found");
   const invoice = await invoicePayload(payment);
   const site = await getWebsiteSettings();
+  const logo = site.logo as { url?: string } | string | null | undefined;
+  const logoUrl = typeof logo === "string" ? logo : logo?.url;
   const pdf = await buildInvoicePdf({
     instituteName: site.name,
     instituteEmail: site.email,
     institutePhone: site.mobile,
     instituteAddress: site.address,
+    logoUrl,
     invoiceNumber: invoice.invoiceNumber,
     date: invoice.date,
     payerName: invoice.payerName,
@@ -412,6 +415,7 @@ export async function buildPaymentInvoicePdf(paymentId: string, orderId: string)
     course: invoice.course,
     fee: invoice.fee,
     discount: invoice.discount,
+    coupon: invoice.coupon,
     total: invoice.total,
     paymentId: invoice.paymentRef,
     orderId: invoice.orderId,
