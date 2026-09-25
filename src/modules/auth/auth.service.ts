@@ -1,6 +1,9 @@
+import crypto from "node:crypto";
 import argon2 from "argon2";
 import { nanoid } from "nanoid";
 import { Role, Student, User } from "../../models/index.ts";
+import { env } from "../../config/env.ts";
+import { sendEmail } from "../../services/messaging.service.ts";
 import { ForbiddenError, UnauthorizedError, BadRequestError } from "../../utils/errors.ts";
 import { saveStudentPushToken, saveStudentPushTokenIfEmpty, saveUserPushToken } from "../../utils/push-token.ts";
 import { hashToken, newJti, signAccess, signRefresh, verifyRefresh } from "../../utils/tokens.ts";
@@ -160,6 +163,59 @@ export async function updateAccount(
       roles: roles.map((r) => r.key),
     },
   };
+}
+
+const RESET_TTL_MS = 30 * 60 * 1000;
+
+export async function requestStaffPasswordReset(email: string) {
+  const user = await User.findOne({ email: email.toLowerCase(), kind: "staff" }).select(
+    "+passwordResetTokenHash",
+  );
+  if (!user || user.status === "blocked" || !user.email) return;
+
+  const token = crypto.randomBytes(32).toString("hex");
+  user.passwordResetTokenHash = hashToken(token);
+  user.passwordResetExpires = new Date(Date.now() + RESET_TTL_MS);
+  await user.save();
+
+  const link = `${env.ADMIN_URL.replace(/\/$/, "")}/reset-password?token=${token}`;
+  await sendEmail(
+    user.email,
+    "Reset your Optech admin password",
+    [
+      `Hello ${user.name},`,
+      ``,
+      `A password reset was requested for your admin account.`,
+      `This link expires in 30 minutes:`,
+      link,
+      ``,
+      `If you did not ask for this, you can ignore the email.`,
+    ].join("\n"),
+  );
+}
+
+export async function resetStaffPasswordWithToken(token: string, newPassword: string) {
+  const user = await User.findOne({
+    kind: "staff",
+    passwordResetTokenHash: hashToken(token),
+    passwordResetExpires: { $gt: new Date() },
+  }).select("+passwordHash +passwordResetTokenHash +refreshTokenHash");
+  if (!user || user.status === "blocked") throw new BadRequestError("This reset link is invalid or has expired");
+
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        passwordHash: await argon2.hash(newPassword),
+        passwordChangedAt: new Date(),
+      },
+      $unset: {
+        refreshTokenHash: 1,
+        passwordResetTokenHash: 1,
+        passwordResetExpires: 1,
+      },
+    },
+  );
 }
 
 export async function hashPassword(plain: string) {

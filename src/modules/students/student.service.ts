@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import {
   Admission,
   Attendance,
@@ -136,12 +137,16 @@ export async function adminUpdateStudent(studentId: string, body: Record<string,
   return adminDetail(studentId);
 }
 
+function randomPassword() {
+  return crypto.randomBytes(18).toString("base64url");
+}
+
 export async function adminResetPassword(studentId: string) {
   const student = await Student.findById(studentId);
   if (!student) throw new NotFoundError("Student not found");
   const user = await User.findById(student.user).select("+passwordHash +refreshTokenHash");
   if (!user) throw new NotFoundError("User not found");
-  const password = Math.random().toString(36).slice(2, 12) + "A1";
+  const password = randomPassword();
   user.passwordHash = await hashPassword(password);
   user.passwordChangedAt = new Date();
   user.refreshTokenHash = undefined;

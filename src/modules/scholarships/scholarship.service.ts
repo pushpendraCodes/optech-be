@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { Coupon, ScholarshipExam, ScholarshipResult, Student, type QuizQuestion } from "../../models/index.ts";
 import { gradeQuiz } from "../../services/grading.service.ts";
 import { pickScholarshipSlab } from "../../services/pricing.service.ts";
-import { NotFoundError, ValidationError } from "../../utils/errors.ts";
+import { ConflictError, NotFoundError, ValidationError } from "../../utils/errors.ts";
 import { objectId, paginationQuery } from "../../utils/pagination.ts";
 import { questionInputSchema, validateImportRows, type ImportRow } from "../quizzes/quiz.service.ts";
 
@@ -178,6 +178,10 @@ function publicExamShape(exam: {
   };
 }
 
+function phoneKey(value: string) {
+  return value.replace(/\D/g, "").slice(-10);
+}
+
 export async function submitExam(input: {
   examId: string;
   name: string;
@@ -185,10 +189,19 @@ export async function submitExam(input: {
   email?: string;
   studentCode?: string;
   answers: { index: number; value: string | number }[];
-  timeTakenSeconds?: number;
 }) {
   const exam = await ScholarshipExam.findById(input.examId);
   if (!exam || !exam.active) throw new NotFoundError("Exam not found");
+  const key = phoneKey(input.phone);
+  if (key.length === 10) {
+    const prior = await ScholarshipResult.findOne({
+      exam: exam._id,
+      phone: { $regex: `${key}$` },
+    })
+      .select("_id")
+      .lean();
+    if (prior) throw new ConflictError("This mobile number has already taken the scholarship exam.");
+  }
   const result = gradeQuiz(exam.questions, input.answers, false);
   const slab = pickScholarshipSlab(result.percent, exam.slabs);
   let couponCode: string | undefined;
@@ -221,16 +234,16 @@ export async function submitExam(input: {
     correct: result.correct,
     wrong: result.wrong,
     skipped: result.skipped,
-    timeTakenSeconds: input.timeTakenSeconds,
     couponCode,
   });
 
   return {
-    ...result,
+    percent: result.percent,
+    score: result.score,
+    max: result.max,
     couponCode,
     slab,
     passed: Boolean(slab),
     resultId: saved._id,
-    timeTakenSeconds: input.timeTakenSeconds,
   };
 }

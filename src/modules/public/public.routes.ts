@@ -1,5 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { validate } from "../../middleware/validate.ts";
 import { asyncHandler } from "../../utils/async-handler.ts";
@@ -19,6 +20,12 @@ import { BadRequestError } from "../../utils/errors.ts";
 
 const router = Router();
 const attendancePhoto = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6 * 1024 * 1024 } });
+const scholarshipLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 router.get(
   "/courses",
@@ -163,6 +170,7 @@ router.get(
 router.get("/scholarship", asyncHandler(async (_req, res) => ok(res, await scholarship.publicExam())));
 router.post(
   "/scholarship/submit",
+  scholarshipLimiter,
   validate({
     body: z.object({
       examId: objectId,
@@ -170,7 +178,6 @@ router.post(
       phone: indianMobileSchema,
       email: z.union([z.string().email(), z.literal("")]).optional(),
       studentCode: z.string().optional(),
-      timeTakenSeconds: z.number().optional(),
       answers: z.array(z.object({ index: z.number(), value: z.union([z.string(), z.number()]) })),
     }),
   }),

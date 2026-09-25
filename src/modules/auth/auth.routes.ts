@@ -1,6 +1,8 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { z } from "zod";
 import { env } from "../../config/env.ts";
+import { UnauthorizedError } from "../../utils/errors.ts";
 import { authenticate } from "../../middleware/auth.ts";
 import { validate } from "../../middleware/validate.ts";
 import { asyncHandler } from "../../utils/async-handler.ts";
@@ -12,9 +14,14 @@ const router = Router();
 const cookieOpts = {
   httpOnly: true,
   secure: Boolean(env.COOKIE_SECURE),
-  sameSite: "lax" as const,
+  sameSite: (env.COOKIE_SECURE ? "none" : "lax") as "none" | "lax",
   path: "/",
 };
+
+function publicSession<T extends { refreshToken: string }>(data: T) {
+  const { refreshToken: _refreshToken, ...rest } = data;
+  return rest;
+}
 
 router.post(
   "/student/login",
@@ -28,7 +35,38 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = await auth.loginStudent(req.body.studentId, req.body.password, req.body.pushToken);
     res.cookie("refreshToken", data.refreshToken, { ...cookieOpts, maxAge: 30 * 24 * 3600 * 1000 });
-    return ok(res, data, "Logged in");
+    return ok(res, publicSession(data), "Logged in");
+  }),
+);
+
+const forgotLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post(
+  "/admin/forgot-password",
+  forgotLimiter,
+  validate({ body: z.object({ email: z.string().email() }) }),
+  asyncHandler(async (req, res) => {
+    await auth.requestStaffPasswordReset(req.body.email);
+    return ok(res, {}, "If that email belongs to an admin account, a reset link is on its way.");
+  }),
+);
+
+router.post(
+  "/admin/reset-password",
+  validate({
+    body: z.object({
+      token: z.string().min(20),
+      password: z.string().min(8),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    await auth.resetStaffPasswordWithToken(req.body.token, req.body.password);
+    return ok(res, {}, "Password updated. Sign in with the new password.");
   }),
 );
 
@@ -44,17 +82,18 @@ router.post(
   asyncHandler(async (req, res) => {
     const data = await auth.loginStaff(req.body.email, req.body.password, req.body.pushToken);
     res.cookie("refreshToken", data.refreshToken, { ...cookieOpts, maxAge: 30 * 24 * 3600 * 1000 });
-    return ok(res, data, "Logged in");
+    return ok(res, publicSession(data), "Logged in");
   }),
 );
 
 router.post(
   "/refresh",
   asyncHandler(async (req, res) => {
-    const token = req.body?.refreshToken || req.cookies?.refreshToken;
-    const data = await auth.rotateRefresh(token);
+    const token = req.cookies?.refreshToken;
+    if (!token) throw new UnauthorizedError("Missing refresh token");
+    const data = await auth.rotateRefresh(String(token));
     res.cookie("refreshToken", data.refreshToken, { ...cookieOpts, maxAge: 30 * 24 * 3600 * 1000 });
-    return ok(res, data, "Token rotated");
+    return ok(res, publicSession(data), "Token rotated");
   }),
 );
 

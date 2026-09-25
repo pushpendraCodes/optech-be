@@ -54,6 +54,8 @@ export interface UserDoc extends Document {
   roles: Types.ObjectId[];
   status: "active" | "blocked" | "pending";
   refreshTokenHash?: string;
+  passwordResetTokenHash?: string;
+  passwordResetExpires?: Date;
   passwordChangedAt?: Date;
   lastLoginAt?: Date;
   pushToken?: string;
@@ -69,6 +71,8 @@ const UserSchema = new Schema<UserDoc>(
     roles: [{ type: Schema.Types.ObjectId, ref: "Role" }],
     status: { type: String, enum: ["active", "blocked", "pending"], default: "active", index: true },
     refreshTokenHash: { type: String, select: false },
+    passwordResetTokenHash: { type: String, select: false },
+    passwordResetExpires: Date,
     passwordChangedAt: Date,
     lastLoginAt: Date,
     pushToken: String,

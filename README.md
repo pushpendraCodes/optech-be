@@ -11,17 +11,13 @@ Node.js 20+, Express, TypeScript, MongoDB/Mongoose, Redis, Zod, JWT + Argon2, Cl
 ```bash
 cd backend
 cp .env.example .env
-docker compose up -d
 npm install
-npx tsx src/scripts/seed.ts
 npm run dev
 ```
 
 API: `http://localhost:4000/api/v1`  
 Swagger: `http://localhost:4000/api/v1/docs`  
 Health: `http://localhost:4000/health`
-
-Super-admin login is seeded from `src/constants/admin.ts`. Change that file before seeding. Never use the example password in production.
 
 ## Auth
 
